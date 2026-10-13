@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Dict } from "@/app/data";
 import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_DESKTOP, MQ_MOTION } from "@/lib/gsap";
@@ -43,14 +43,67 @@ const inOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t
 const FRAME_START = "inset(16% 12% 16% 12%)";
 const FRAME_END = "inset(0% 0% 0% 0%)";
 
-function Wordmark({ className = "" }: { className?: string }) {
+// The wordmark is drawn in SVG so the very same glyphs can clip a clip playing inside them.
+const GLYPH = 200; // font size in SVG units
+
+/**
+ * "December" with a mirrored copy of the salon clip running through its letters, over the
+ * clips behind it. The tint inside follows the text colour (dark on paper, light over video).
+ * Clipping uses an SVG clipPath on an HTML box, which Chrome, Safari and Firefox all support.
+ */
+function Wordmark({ id }: { id: string }) {
+  const text = useRef<SVGTextElement | null>(null);
+  const fill = useRef<HTMLSpanElement | null>(null);
+  const [box, setBox] = useState<[number, number, number, number] | null>(null);
+
+  // Measure the real glyphs once the web font is in, so the clip fits the letters exactly
+  useEffect(() => {
+    let alive = true;
+    document.fonts.ready.then(() => {
+      const b = text.current?.getBBox();
+      if (alive && b) setBox([b.x, b.y, b.width, b.height]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // The clip inside only exists once measured, so it registers its own play-while-visible
+  useEffect(() => (box && fill.current ? playWhileVisible(fill.current) : undefined), [box]);
+
+  const [x, y, w, h] = box ?? [0, -150, 1180, 190];
+  const inside = PANELS[1];
+
   return (
-    <span aria-hidden className={`block whitespace-nowrap overflow-hidden pb-[0.04em] ${className}`}>
-      {"December".split("").map((ch, i) => (
-        <span key={i} data-letter className="inline-block will-change-transform">
-          {ch}
-        </span>
-      ))}
+    <span aria-hidden className="block overflow-hidden pb-[0.04em]">
+      <span data-letter className="relative inline-block align-top">
+        <svg viewBox={`${x} ${y} ${w} ${h}`} style={{ width: `${w / GLYPH}em` }} className="block h-auto overflow-visible">
+          <defs>
+            <clipPath id={id} clipPathUnits="objectBoundingBox">
+              <use href={`#${id}-glyphs`} transform={`scale(${1 / w} ${1 / h}) translate(${-x} ${-y})`} />
+            </clipPath>
+          </defs>
+          <text id={`${id}-glyphs`} ref={text} x="0" y="0" fontSize={GLYPH} style={{ letterSpacing: -0.045 * GLYPH }} fill="currentColor">
+            December
+          </text>
+        </svg>
+        {box && (
+          <span ref={fill} className="absolute inset-0" style={{ clipPath: `url(#${id})` }}>
+            {/* The clip behind, mirrored, so the letters read as a reflection */}
+            <video
+              src={inside.src}
+              poster={inside.poster}
+              muted
+              loop
+              playsInline
+              preload="none"
+              className="absolute inset-0 w-full h-full object-cover -scale-x-100"
+            />
+            {/* Tint in the text colour keeps the word legible on paper and over video */}
+            <span className="absolute inset-0 bg-current opacity-30" />
+          </span>
+        )}
+      </span>
     </span>
   );
 }
@@ -183,7 +236,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div data-desk-word data-ink className="text-paper font-serif leading-[0.8] tracking-[-0.045em] text-[19vw] 2xl:text-[19rem]">
-            <Wordmark />
+            <Wordmark id="wordmark-desk" />
             <span data-hero-fade className="block text-right italic text-[4.2vw] 2xl:text-[4.2rem] leading-none tracking-normal -mt-[0.6vw] pr-[0.5vw]">
               Hair
             </span>
@@ -201,7 +254,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
       {/* Mobile */}
       <div className="md:hidden pt-24 px-5 pb-10">
         <div className="font-serif leading-[0.8] tracking-[-0.045em] text-[19.5vw] -ml-1">
-          <Wordmark />
+          <Wordmark id="wordmark-mob" />
           <span data-hero-fade className="block text-right italic text-[7vw] leading-none tracking-normal mt-1 text-moss">
             Hair
           </span>
