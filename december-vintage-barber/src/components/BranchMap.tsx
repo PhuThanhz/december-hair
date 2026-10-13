@@ -159,6 +159,11 @@ function setAerial(map: MLMap, on: boolean) {
   map.setLayoutProperty("salon-building", "visibility", on ? "none" : "visible");
   for (const layer of map.getStyle().layers ?? []) {
     if (layer.type !== "symbol") continue;
+    // Road-number shields are white plates: white text would vanish, so they step aside on the photo
+    if (layer.id.includes("shield")) {
+      map.setLayoutProperty(layer.id, "visibility", on ? "none" : "visible");
+      continue;
+    }
     try {
       map.setPaintProperty(layer.id, "text-color", on ? "#ffffff" : PALETTE.label);
       map.setPaintProperty(layer.id, "text-halo-color", on ? "rgba(15,26,18,0.75)" : PALETTE.halo);
@@ -191,6 +196,13 @@ export default function BranchMap({
   const [failed, setFailed] = useState(false);
   const [aerial, setAerialState] = useState(false);
   const aerialRef = useRef(false);
+  // Drone-style orbit around the selected salon
+  const orbit = useRef(0);
+  const onScreen = useRef(true);
+  const stopOrbit = () => {
+    cancelAnimationFrame(orbit.current);
+    orbit.current = 0;
+  };
   const select = useRef(onSelect);
   useEffect(() => {
     select.current = onSelect;
@@ -251,6 +263,13 @@ export default function BranchMap({
         setAerial(m, aerialRef.current);
       });
 
+      // Any hand on the map takes over from the drone
+      for (const ev of ["mousedown", "touchstart", "wheel"] as const) m.on(ev, stopOrbit);
+      // Only orbit while the map is on screen
+      const io = new IntersectionObserver(([e]) => (onScreen.current = e.isIntersecting));
+      if (box.current) io.observe(box.current);
+      m.once("remove", () => io.disconnect());
+
       BRANCHES.forEach((b, i) => {
         const el = markerEl(i);
         el.addEventListener("click", () => select.current(b.id));
@@ -260,6 +279,7 @@ export default function BranchMap({
 
     return () => {
       cancelled = true;
+      stopOrbit();
       map.current?.remove();
       map.current = null;
       markers.current = {};
@@ -281,8 +301,21 @@ export default function BranchMap({
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const b = BRANCHES.find((x) => x.id === active);
     highlight(m, null);
+    stopOrbit();
     if (b) {
-      m.once("moveend", () => highlight(m, b.coords));
+      m.once("moveend", () => {
+        highlight(m, b.coords);
+        if (reduce) return;
+        // Then circle the centre slowly, about one turn every 90 s, until someone touches the map
+        let last = performance.now();
+        const spin = (now: number) => {
+          const dt = Math.min(now - last, 100);
+          last = now;
+          if (onScreen.current && !document.hidden) m.setBearing(m.getBearing() + dt * 0.004);
+          orbit.current = requestAnimationFrame(spin);
+        };
+        orbit.current = requestAnimationFrame(spin);
+      });
       m.flyTo({
         center: b.coords,
         zoom: 16.2,

@@ -174,7 +174,7 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                   >
                     <button
                       onClick={() => setActive(on ? null : b.id)}
-                      className="w-full text-left cursor-pointer pt-7 pb-3 group flex items-baseline justify-between gap-4"
+                      className="w-full text-left cursor-pointer pt-7 pb-3 group flex items-baseline justify-between gap-4 outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-4 focus-visible:ring-offset-transparent"
                       aria-pressed={on}
                     >
                       <span
