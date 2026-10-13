@@ -72,7 +72,9 @@ function Wordmark({ id }: { id: string }) {
   useEffect(() => (box && fill.current ? playWhileVisible(fill.current) : undefined), [box]);
 
   const [x, y, w, h] = box ?? [0, -150, 1180, 190];
-  const inside = PANELS[1];
+  // Pre-rendered: the centre clip's middle band, flipped upside down and in black and white, so the
+  // browser only decodes a small video (no CSS filter or transform to redo every frame)
+  const inside = { src: "/videos/europark-reflection.mp4", poster: "/videos/europark-reflection-poster.jpg" };
 
   return (
     <span aria-hidden className="block overflow-hidden pb-[0.04em]">
@@ -89,7 +91,7 @@ function Wordmark({ id }: { id: string }) {
         </svg>
         {box && (
           <span ref={fill} className="absolute inset-0" style={{ clipPath: `url(#${id})` }}>
-            {/* The clip behind, flipped upside down in black and white: a reflection, not a second colour */}
+            {/* The clip behind as a reflection: upside down, black and white */}
             <video
               src={inside.src}
               poster={inside.poster}
@@ -97,7 +99,7 @@ function Wordmark({ id }: { id: string }) {
               loop
               playsInline
               preload="none"
-              className="absolute inset-0 w-full h-full object-cover -scale-y-100 [filter:grayscale(1)_contrast(1.15)]"
+              className="absolute inset-0 w-full h-full object-cover"
             />
             {/* Tint in the text colour keeps the word legible on paper and over video */}
             <span className="absolute inset-0 bg-current opacity-30" />

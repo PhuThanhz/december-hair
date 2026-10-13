@@ -70,7 +70,9 @@ export default function Header({
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
-      setSolid(y > 40);
+      // Stay transparent over the hero (its clips run edge to edge); go solid once past it
+      const hero = document.getElementById("top");
+      setSolid(hero ? hero.getBoundingClientRect().bottom <= 64 : y > 40);
       if (!bar.current) return;
       const hide = y > last && y > 200;
       gsap.to(bar.current, { yPercent: hide ? -100 : 0, duration: 0.6, ease: "power3.out", overwrite: true });
