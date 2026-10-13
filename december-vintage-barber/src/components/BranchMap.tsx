@@ -78,9 +78,7 @@ function recolor(map: MLMap) {
       "source-layer": "building",
       minzoom: 14,
       paint: {
-        // The salon's own centre turns brand green (set per building via feature-state, so it's the same
-        // block recoloured rather than a second one on top, which flickered where the walls overlapped)
-        "fill-extrusion-color": ["case", ["boolean", ["feature-state", "salon"], false], "#4a7a36", "#dcdbcf"],
+        "fill-extrusion-color": "#dcdbcf",
         "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
         "fill-extrusion-opacity": 1,
@@ -88,9 +86,11 @@ function recolor(map: MLMap) {
     });
   }
 
-  // A soft glow on the ground around the salon
+  // The salon's own centre in brand green, with a soft glow on the ground around it
   if (!map.getSource("salon-point")) {
-    map.addSource("salon-point", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    const empty = { type: "FeatureCollection" as const, features: [] };
+    map.addSource("salon", { type: "geojson", data: empty });
+    map.addSource("salon-point", { type: "geojson", data: empty });
     map.addLayer(
       {
         id: "salon-glow",
@@ -106,18 +106,37 @@ function recolor(map: MLMap) {
       },
       "building-3d"
     );
+    map.addLayer({
+      id: "salon-building",
+      type: "fill-extrusion",
+      source: "salon",
+      paint: {
+        "fill-extrusion-color": "#4a7a36",
+        "fill-extrusion-height": ["+", ["coalesce", ["get", "render_height"], 8], 1],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+        "fill-extrusion-opacity": 1,
+      },
+    });
   }
 }
 
-const BUILDINGS = { source: "openmaptiles", sourceLayer: "building" } as const;
+type Ring = [number, number][];
+/** Grow a ring slightly around its centre (~1 m on a shopping centre) so the green copy fully
+ *  encloses the grey building: no shared walls, so no z-fighting stripes. */
+const grow = (ring: Ring, k = 1.004): Ring => {
+  const cx = ring.reduce((a, p) => a + p[0], 0) / ring.length;
+  const cy = ring.reduce((a, p) => a + p[1], 0) / ring.length;
+  return ring.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
+};
 
 /** Light up the building under the salon's pin (and the ground around it); null clears it. */
 function highlight(map: MLMap, coords: [number, number] | null) {
   const point = map.getSource("salon-point") as GeoJSONSource | undefined;
-  if (!point) return;
-  map.removeFeatureState(BUILDINGS);
+  const building = map.getSource("salon") as GeoJSONSource | undefined;
+  if (!point || !building) return;
   if (!coords) {
     point.setData({ type: "FeatureCollection", features: [] });
+    building.setData({ type: "FeatureCollection", features: [] });
     return;
   }
   point.setData({ type: "Feature", geometry: { type: "Point", coordinates: coords }, properties: {} });
@@ -130,7 +149,27 @@ function highlight(map: MLMap, coords: [number, number] | null) {
     ],
     { layers: ["building-3d"] }
   );
-  for (const f of parts) if (f.id !== undefined) map.setFeatureState({ ...BUILDINGS, id: f.id }, { salon: true });
+  // Only the building(s) right under the pin. Plain copies: rendered features are live tile objects
+  // the GeoJSON worker can't receive. (Ids aren't unique in these tiles, so feature-state can't be used.)
+  // Tiles bundle unrelated buildings into one multi-part feature, so keep only the parts whose
+  // outline actually reaches the pin
+  const near = (ring: Ring) => {
+    const pts = ring.map((c) => map.project(c));
+    const xs = pts.map((q) => q.x);
+    const ys = pts.map((q) => q.y);
+    return Math.min(...xs) <= at.x + 6 && Math.max(...xs) >= at.x - 6 && Math.min(...ys) <= at.y + 6 && Math.max(...ys) >= at.y - 6;
+  };
+  const polygons: Ring[][] = [];
+  for (const f of parts) {
+    const g = f.geometry as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+    const polys = (g.type === "Polygon" ? [g.coordinates] : g.coordinates) as Ring[][];
+    for (const poly of polys) if (near(poly[0])) polygons.push(poly.map((r) => grow(r)));
+  }
+  building.setData({
+    type: "Feature",
+    geometry: { type: "MultiPolygon", coordinates: polygons },
+    properties: { ...(parts[0]?.properties ?? {}) },
+  });
 }
 
 /** Swap between the drawn map and the aerial photo; labels flip to white so they stay legible. */
@@ -138,6 +177,7 @@ function setAerial(map: MLMap, on: boolean) {
   if (!map.getLayer("ortho")) return;
   map.setLayoutProperty("ortho", "visibility", on ? "visible" : "none");
   map.setLayoutProperty("building-3d", "visibility", on ? "none" : "visible");
+  map.setLayoutProperty("salon-building", "visibility", on ? "none" : "visible");
   for (const layer of map.getStyle().layers ?? []) {
     if (layer.type !== "symbol") continue;
     // Road-number shields are white plates: white text would vanish, so they step aside on the photo
