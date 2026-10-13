@@ -1,0 +1,17 @@
+# Dependencies and build output (recreated by npm install / next build)
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local backups (original videos, old site-1 code)
+_backup-*/
+**/_backup-*/
+
+# Secrets
+.env*
+
+# OS / tools
+.DS_Store
+.claude/

@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+@theme {
+  /* Green & white palette, taken from the salon's own walls */
+  --color-paper: #f4f3ee;
+  --color-bone: #e9e8e0;
+  --color-celadon: #dde6d5;
+  --color-ink: #0f1a12;
+  --color-ink-soft: #56604f;
+  --color-moss: #3f6b2c;
+  --color-forest: #11261a;
+  --color-forest-2: #18321f;
+  --color-sage: #9db08f;
+  --color-chrome: #c8cbc4;
+
+  --font-serif: var(--font-bodoni), "Didot", "Bodoni 72", Georgia, serif;
+  --font-sans: var(--font-schibsted), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--color-moss);
+  color: var(--color-paper);
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Hairline link that retracts on hover */
+.link-line {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  padding-bottom: 2px;
+  transition: background-size 0.6s var(--ease-out-quint);
+}
+.link-line:hover {
+  background-size: 0% 1px;
+  background-position: 100% 100%;
+}
+
+.leader {
+  flex: 1;
+  min-width: 1.5rem;
+  border-bottom: 1px dotted currentColor;
+  opacity: 0.3;
+  transform: translateY(-0.35em);
+}
+
+.line-mask {
+  display: block;
+  overflow: hidden;
+  padding-top: 0.18em;
+  margin-top: -0.18em;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+  padding-right: 0.25em;
+  margin-right: -0.25em;
+}
+
+.text-outline {
+  color: transparent !important;
+  -webkit-text-stroke: 1px var(--stroke, var(--color-sage));
+}
+
+
+@keyframes marqueeLeft {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+@keyframes marqueeRight {
+  0% { transform: translate3d(-50%, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.animate-marquee-left {
+  animation: marqueeLeft 38s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-right {
+  animation: marqueeRight 42s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-left-fast {
+  animation: marqueeLeft 32s linear infinite;
+  will-change: transform;
+}
+
+/* Without motion the services row simply scrolls sideways */
+@media (prefers-reduced-motion: reduce) {
+  [data-hscroll] {
+    overflow-x: auto !important;
+  }
+}
+
+/* Map markers */
+.dh-marker {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.dh-marker-dot {
+  position: absolute;
+  inset: 6px;
+  border-radius: 9999px;
+  background: var(--color-forest);
+  color: var(--color-paper);
+  font: 500 11px/32px var(--font-sans);
+  letter-spacing: 0.06em;
+  text-align: center;
+  box-shadow: 0 0 0 3px var(--color-paper);
+  transition: transform 0.5s var(--ease-out-quint), background-color 0.5s;
+}
+.dh-marker-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--color-moss);
+  opacity: 0;
+}
+.dh-marker:hover .dh-marker-dot,
+.dh-marker.is-active .dh-marker-dot {
+  background: var(--color-moss);
+  transform: scale(1.18);
+}
+.dh-marker.is-active .dh-marker-pulse {
+  animation: dh-pulse 1.8s ease-out infinite;
+}
+@keyframes dh-pulse {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.maplibregl-ctrl-group {
+  border-radius: 9999px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+  border: 1px solid rgba(15, 26, 18, 0.12);
+}
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgba(244, 243, 238, 0.8) !important;
+}
+
+/* Underline timer under the lit verb in "About" */
+@keyframes aboutTimer {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Prices: straight lining figures in the sans, so amounts read at a glance */
+.price {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* The selection summary: one flat sheet, like a printed bill */
+.bill {
+  border-radius: 1rem;
+  background: #fbfaf6;
+  border: 1px solid rgba(15, 26, 18, 0.1);
+}
+
+/* Each new receipt line prints in */
+.receipt-line {
+  animation: printIn 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes printIn {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .receipt-line {
+    animation: none;
+  }
+}
