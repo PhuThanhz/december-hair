@@ -22,9 +22,6 @@ export const metadata: Metadata = {
   title: "December Hair — kadeřnictví Praha, Kladno, Mladá Boleslav",
   description:
     "Kadeřnictví pro ženy, muže i děti. Tři salony: OC Europark Praha, OC Central Kladno a OC Bondy Mladá Boleslav. Otevřeno každý den.",
-  icons: {
-    icon: "/images/logo-green.png",
-  },
 };
 
 export default function RootLayout({
