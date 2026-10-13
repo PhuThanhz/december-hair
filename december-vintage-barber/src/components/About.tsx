@@ -8,30 +8,19 @@ import { playWhileVisible } from "@/lib/video";
 const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
 
-// Opening window across the salons, e.g. "08:00 – 20:00" and "09:00 – 20:00" → 08:00 to 20:00
-const spans = BRANCHES.map((b) => b.hours.split(/\s*[–-]\s*/));
-const OPEN = spans.map((s) => s[0]).sort()[0];
-const CLOSE = spans.map((s) => s[1]).sort().reverse()[0];
-const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+// Latest closing time across the salons, e.g. "09:00 – 20:00" → 20:00
+const CLOSE = BRANCHES.map((b) => b.hours.split(/\s*[–-]\s*/)[1]).sort().reverse()[0];
 
-/** Current time and weekday (0 = Monday) in Prague, whatever the visitor's own timezone. */
-function pragueNow() {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Prague",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(get("weekday"));
-  return { day, minutes: Number(get("hour")) * 60 + Number(get("minute")) };
-}
+/** Today's weekday in Prague (0 = Monday), whatever the visitor's own timezone. */
+const pragueDay = () =>
+  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Prague", weekday: "short" }).format(new Date())
+  );
 
 /**
  * "Three salons, one team", then the three things we do as huge words. The word crossing the
  * middle of the screen comes alive: its clip runs through the letters and plays, sharp, in the
- * frame beside them. Below, three facts that answer real questions: where, which days, until when.
+ * frame beside them. Below, three facts: where, which days, until when.
  *
  * Video-in-text without masks: inside an isolated box, white paper with black letters is
  * "screen"-blended over the clip (black letters let it through, white stays white), then a
@@ -41,14 +30,14 @@ export default function About({ t }: { t: Dict }) {
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<Clip>("cut");
   // Clock-dependent, so only known on the client
-  const [now, setNow] = useState<{ day: number; minutes: number } | null>(null);
+  const [today, setToday] = useState<number | null>(null);
 
   useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
 
   useEffect(() => {
-    const tick = () => setNow(pragueNow());
+    const tick = () => setToday(pragueDay());
     const first = window.setTimeout(tick, 0);
-    const id = window.setInterval(tick, 30_000);
+    const id = window.setInterval(tick, 60_000);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(id);
@@ -111,21 +100,6 @@ export default function About({ t }: { t: Dict }) {
     if (lenis) lenis.scrollTo("#pobocky", { duration: 1.1 });
     else document.querySelector("#pobocky")?.scrollIntoView({ behavior: "smooth" });
   };
-
-  // "Open for another 1 h 35 min" / "Closed now, we open at 08:00"
-  let status = "";
-  let open = false;
-  if (now) {
-    const left = toMin(CLOSE) - now.minutes;
-    open = now.minutes >= toMin(OPEN) && left > 0;
-    if (open) {
-      const h = Math.floor(left / 60);
-      const m = left % 60;
-      status = t.aboutOpenFor.replace("{left}", `${h ? `${h} h ` : ""}${m} min`.trim());
-    } else {
-      status = t.aboutClosed.replace("{time}", OPEN.replace(/^0/, ""));
-    }
-  }
 
   return (
     <section ref={root} className="relative bg-paper px-5 sm:px-8 lg:px-12 py-24 sm:py-32">
@@ -241,11 +215,11 @@ export default function About({ t }: { t: Dict }) {
             </dt>
             <dd data-days className="mt-4 grid grid-cols-7 gap-1.5 max-w-xs">
               {t.aboutDays.map((d, i) => {
-                const today = now?.day === i;
+                const isToday = today === i;
                 return (
                   <span key={d} data-day className="flex flex-col items-center gap-1.5">
-                    <span className={`w-full h-1.5 rounded-full ${today ? "bg-moss" : "bg-forest/25"}`} />
-                    <span className={`text-xs ${today ? "text-moss font-medium" : "text-ink-soft"}`}>{d}</span>
+                    <span className={`w-full h-1.5 rounded-full ${isToday ? "bg-moss" : "bg-forest/25"}`} />
+                    <span className={`text-xs ${isToday ? "text-moss font-medium" : "text-ink-soft"}`}>{d}</span>
                   </span>
                 );
               })}
@@ -257,17 +231,6 @@ export default function About({ t }: { t: Dict }) {
               <span className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">{CLOSE}</span>
               <span className="text-ink-soft">{t.aboutFacts[2].l}</span>
             </dt>
-            <dd className="mt-4 flex items-center gap-2.5 text-sm min-h-[2rem]">
-              {now && (
-                <>
-                  <span className={`relative flex w-2.5 h-2.5`}>
-                    {open && <span className="absolute inset-0 rounded-full bg-moss/50 animate-ping" />}
-                    <span className={`relative w-2.5 h-2.5 rounded-full ${open ? "bg-moss" : "bg-ink/30"}`} />
-                  </span>
-                  <span className={open ? "text-moss" : "text-ink-soft"}>{status}</span>
-                </>
-              )}
-            </dd>
           </div>
         </dl>
       </div>

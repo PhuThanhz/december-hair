@@ -236,9 +236,6 @@ export const T = {
     aboutTitle: ["Tři salony,", "jeden tým."],
     aboutVerbs: ["Stříháme", "barvíme", "pečujeme"],
     aboutDays: ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"],
-    aboutToday: "dnes",
-    aboutOpenFor: "Dnes otevřeno ještě {left}",
-    aboutClosed: "Teď zavřeno · otevíráme v {time}",
     aboutText: "Stříháme, barvíme a pečujeme bez spěchu a s citem pro detail. Ať přijdete do kteréhokoli salonu, čeká vás stejná péče.",
     aboutFacts: [
       { n: "3", l: "salony" },
@@ -377,9 +374,6 @@ export const T = {
     aboutTitle: ["Three salons,", "one team."],
     aboutVerbs: ["We cut", "colour", "care"],
     aboutDays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
-    aboutToday: "today",
-    aboutOpenFor: "Open today for another {left}",
-    aboutClosed: "Closed now · we open at {time}",
     aboutText: "We cut, colour and care, unhurried and with an eye for detail. Whichever salon you walk into, the same care is waiting.",
     aboutFacts: [
       { n: "3", l: "salons" },
