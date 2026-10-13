@@ -47,7 +47,7 @@ const FRAME_END = "inset(0% 0% 0% 0%)";
 const GLYPH = 200; // font size in SVG units
 
 /**
- * "December" with a mirrored copy of the salon clip running through its letters, over the
+ * "December" with a black-and-white, upside-down copy of the salon clip running through its letters, over the
  * clips behind it. The tint inside follows the text colour (dark on paper, light over video).
  * Clipping uses an SVG clipPath on an HTML box, which Chrome, Safari and Firefox all support.
  */
@@ -89,7 +89,7 @@ function Wordmark({ id }: { id: string }) {
         </svg>
         {box && (
           <span ref={fill} className="absolute inset-0" style={{ clipPath: `url(#${id})` }}>
-            {/* The clip behind, mirrored, so the letters read as a reflection */}
+            {/* The clip behind, flipped upside down in black and white: a reflection, not a second colour */}
             <video
               src={inside.src}
               poster={inside.poster}
@@ -97,7 +97,7 @@ function Wordmark({ id }: { id: string }) {
               loop
               playsInline
               preload="none"
-              className="absolute inset-0 w-full h-full object-cover -scale-x-100"
+              className="absolute inset-0 w-full h-full object-cover -scale-y-100 [filter:grayscale(1)_contrast(1.15)]"
             />
             {/* Tint in the text colour keeps the word legible on paper and over video */}
             <span className="absolute inset-0 bg-current opacity-30" />
