@@ -2,75 +2,56 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Dict } from "@/app/data";
-import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
+import { gsap, useGSAP, ScrollTrigger, EASE, MQ_MOTION } from "@/lib/gsap";
 import { playWhileVisible } from "@/lib/video";
 
 const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
-const CYCLE = 5000; // ms each clip plays before the next
-
-// The doorway is drawn on a 520 × 680 grid so the D-shaped niche, the glass, its LED ring
-// and the logo's hairline strands all line up at any size.
-const GRID = { w: 520, h: 680 };
-const box = (x: number, y: number, w: number, h: number) => ({
-  left: `${(x / GRID.w) * 100}%`,
-  top: `${(y / GRID.h) * 100}%`,
-  width: `${(w / GRID.w) * 100}%`,
-  height: `${(h / GRID.h) * 100}%`,
-});
-// The December "D": a bold straight stem on the left and a bowl bulging out to the right.
-// Every layer's bowl is a half-ellipse around the same centre, so the curves run parallel.
-const D = { cx: 135, cy: 340, rx: 315, ry: 300 };
-/** A D-shaped layer `inset` units inside the niche, starting at `left` (a thicker stem on the left). */
-const dLayer = (left: number, inset: number) => {
-  const rx = D.rx - inset;
-  const ry = D.ry - inset;
-  const w = D.cx + rx - left;
-  return {
-    ...box(left, D.cy - ry, w, ry * 2),
-    borderRadius: `0 ${(rx / w) * 100}% ${(rx / w) * 100}% 0 / 0 50% 50% 0`,
-  };
-};
-// Like the logo, the strands all leave the top of the stem and meet again at its foot, fanning out between.
-const STRANDS = [1, 2, 3, 4, 5].map((k) => `M ${D.cx} ${D.cy - D.ry} A ${D.rx + k * 13} ${D.ry} 0 0 1 ${D.cx} ${D.cy + D.ry}`);
 
 /**
- * "Three salons, one team", seen through a doorway shaped like the December "D". Scrolling in
- * switches its LED halo on and draws the logo's hairline strands around the bowl; the clip
- * in the glass is the verb lit underneath (cut, colour, care).
+ * "Three salons, one team", then the three things we do as huge words. The word in focus
+ * comes alive: its clip plays inside the letters (hair, colour, water, never a cropped face),
+ * while the other two wait as outlines. Scrolling, hovering or tapping a word brings it to life.
+ *
+ * Video-in-text without masks: inside an isolated box, white paper with black letters is
+ * "screen"-blended over the clip (black letters let the clip through, white stays white),
+ * then a paper-coloured layer is "multiply"-blended so the white matches the page.
+ * Works the same in Chrome and Safari.
  */
 export default function About({ t }: { t: Dict }) {
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<Clip>("cut");
 
-  // Only the visible clip plays, and only while the section is on screen
+  // Only the living word's clip plays, and only while it is on screen
   useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
-
-  // Advance to the next clip; picking a verb restarts the timer
-  useEffect(() => {
-    const id = window.setTimeout(() => setActive((a) => CLIPS[(CLIPS.indexOf(a) + 1) % CLIPS.length]), CYCLE);
-    return () => window.clearTimeout(id);
-  }, [active]);
 
   useGSAP(
     () => {
+      // The word crossing the middle of the screen is the one alive
+      gsap.utils.toArray<HTMLElement>("[data-verb]").forEach((el) => {
+        ScrollTrigger.create({
+          trigger: el,
+          start: "top 60%",
+          end: "bottom 40%",
+          onToggle: (st) => st.isActive && setActive(el.dataset.verb as Clip),
+        });
+      });
+
       const mm = gsap.matchMedia();
       mm.add(MQ_MOTION, () => {
-        const tl = gsap.timeline({ scrollTrigger: { trigger: "[data-mirror-wrap]", start: "top 75%" } });
-        tl.fromTo("[data-niche]", { clipPath: "inset(100% 0% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.2, ease: "expo.out" })
-          .fromTo("[data-glass]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, ease: "power2.out" }, 0.45)
-          // The LED halo flickers on like a mirror light being switched on
-          .fromTo(
-            "[data-led]",
-            { autoAlpha: 0 },
-            { keyframes: [{ autoAlpha: 0.7, duration: 0.08 }, { autoAlpha: 0.15, duration: 0.1 }, { autoAlpha: 1, duration: 0.5 }] },
-            0.8
-          )
-          // The logo's strands draw themselves around the bowl
-          .fromTo("[data-strand]", { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", stagger: 0.08 }, 0.9)
-          .fromTo("[data-verbs]", { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out" }, 1.1)
-          .fromTo("[data-about-line]", { yPercent: 110 }, { yPercent: 0, duration: 1.1, ease: EASE, stagger: 0.1 }, 0.2)
-          .fromTo("[data-about-fade]", { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 }, 0.5);
+        gsap.fromTo(
+          "[data-about-line]",
+          { yPercent: 110 },
+          { yPercent: 0, duration: 1.1, ease: EASE, stagger: 0.1, scrollTrigger: { trigger: root.current, start: "top 75%" } }
+        );
+        gsap.fromTo(
+          "[data-about-fade]",
+          { autoAlpha: 0, y: 14 },
+          { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08, scrollTrigger: { trigger: root.current, start: "top 70%" } }
+        );
+        gsap.utils.toArray<HTMLElement>("[data-verb]").forEach((el) => {
+          gsap.fromTo(el, { yPercent: 18, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 1.1, ease: EASE, scrollTrigger: { trigger: el, start: "top 90%" } });
+        });
       });
       return () => mm.revert();
     },
@@ -78,10 +59,10 @@ export default function About({ t }: { t: Dict }) {
   );
 
   return (
-    <section ref={root} className="relative bg-paper px-5 sm:px-8 lg:px-12 py-24 sm:py-32">
-      <div className="mx-auto max-w-[1600px] grid grid-cols-12 gap-x-8 gap-y-12 items-center">
-        <div className="col-span-12 lg:col-span-4">
-          <h2 className="font-serif text-6xl sm:text-7xl lg:text-[5rem] leading-[0.98] tracking-[-0.03em]">
+    <section ref={root} className="relative bg-paper px-5 sm:px-8 lg:px-12 py-24 sm:py-32 overflow-hidden">
+      <div className="mx-auto max-w-[1600px]">
+        <div className="grid grid-cols-12 gap-x-8 gap-y-6 items-end">
+          <h2 className="col-span-12 lg:col-span-7 font-serif text-5xl sm:text-6xl lg:text-7xl leading-[0.98] tracking-[-0.03em]">
             {t.aboutTitle.map((line, i) => (
               <span key={i} className="line-mask">
                 <span data-about-line className={`block ${i === 1 ? "italic text-moss" : ""}`}>
@@ -90,75 +71,52 @@ export default function About({ t }: { t: Dict }) {
               </span>
             ))}
           </h2>
-          <p data-about-fade className="mt-7 max-w-sm text-lg leading-relaxed text-ink-soft">
+          <p data-about-fade className="col-span-12 lg:col-span-4 lg:col-start-9 text-lg leading-relaxed text-ink-soft">
             {t.aboutText}
           </p>
         </div>
 
-        {/* The D doorway */}
-        <div className="col-span-12 sm:col-span-8 sm:col-start-3 lg:col-span-4 lg:col-start-5">
-          <div data-mirror-wrap className="relative mx-auto w-full max-w-[460px]" style={{ aspectRatio: `${GRID.w} / ${GRID.h}` }}>
-            <svg viewBox={`0 0 ${GRID.w} ${GRID.h}`} className="absolute inset-0 w-full h-full overflow-visible" aria-hidden>
-              {STRANDS.map((d, i) => (
-                <path
-                  key={d}
-                  data-strand
-                  d={d}
-                  pathLength={1}
-                  strokeDasharray={1}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  vectorEffect="non-scaling-stroke"
-                  className="text-forest"
-                  style={{ opacity: 0.55 - i * 0.09 }}
-                />
-              ))}
-            </svg>
-            <div data-niche className="absolute bg-forest" style={dLayer(30, 0)} />
-            <div
-              data-led
-              aria-hidden
-              className="absolute border-2 border-[#fffaf0]/90 shadow-[0_0_8px_1px_rgba(255,246,222,0.8),0_0_22px_2px_rgba(255,246,222,0.28),inset_0_0_10px_1px_rgba(255,246,222,0.5)]"
-              style={dLayer(88, 17)}
-            />
-            <div data-glass className="absolute overflow-hidden bg-forest-2" style={dLayer(95, 24)}>
-              {CLIPS.map((c) => (
+        {/* The three things we do; the one in focus has its clip running through the letters */}
+        <div className="mt-14 sm:mt-20 border-t border-ink/15">
+          {CLIPS.map((c, i) => {
+            const on = c === active;
+            return (
+              <button
+                key={c}
+                data-verb={c}
+                onClick={() => setActive(c)}
+                onMouseEnter={() => setActive(c)}
+                aria-pressed={on}
+                aria-label={t.aboutClips[c]}
+                className="relative isolate block w-full cursor-pointer overflow-hidden border-b border-ink/15 text-left"
+              >
                 <video
-                  key={c}
                   src={`/videos/about-${c}.mp4`}
                   poster={`/videos/about-${c}.jpg`}
-                  data-hold={c !== active || undefined}
+                  data-hold={!on || undefined}
                   muted
                   loop
                   playsInline
                   preload="none"
-                  aria-label={t.aboutClips[c]}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${c === active ? "opacity-100" : "opacity-0"}`}
+                  aria-hidden
+                  className={`absolute inset-0 w-full h-full object-cover [filter:contrast(1.25)_saturate(1.3)_brightness(0.82)] transition-opacity duration-500 ${on ? "opacity-100" : "opacity-0"}`}
                 />
-              ))}
-            </div>
-          </div>
-
-          {/* The lit verb is the clip in the glass */}
-          <div data-verbs className="mt-6 flex items-baseline justify-center gap-3 font-serif italic text-2xl sm:text-[1.7rem]">
-            {CLIPS.map((c, i) => (
-              <span key={c} className="flex items-baseline gap-3">
-                {i > 0 && <span className="text-ink/25">·</span>}
-                <button
-                  onClick={() => setActive(c)}
-                  aria-pressed={c === active}
-                  className={`cursor-pointer transition-colors duration-500 ${c === active ? "text-moss" : "text-ink/35 hover:text-ink"}`}
+                <span
+                  className={`relative block font-serif font-extrabold italic leading-[0.92] tracking-[-0.035em] text-[19vw] sm:text-[17vw] lg:text-[15.5vw] pb-[0.06em] pl-[0.02em] transition-colors duration-500 ${
+                    on ? "bg-white text-black mix-blend-screen" : "bg-paper text-outline [--stroke:rgba(15,26,18,0.28)]"
+                  }`}
                 >
                   {t.aboutVerbs[i]}
-                </button>
-              </span>
-            ))}
-          </div>
+                </span>
+                {/* Turns the white around the letters back into the page colour */}
+                <span aria-hidden className={`absolute inset-0 bg-paper mix-blend-multiply pointer-events-none ${on ? "" : "hidden"}`} />
+              </button>
+            );
+          })}
         </div>
 
         {/* The facts a visitor actually needs */}
-        <dl className="col-span-12 lg:col-span-3 lg:col-start-10 grid grid-cols-3 lg:grid-cols-1 gap-4 lg:gap-8">
+        <dl className="mt-14 grid grid-cols-3 gap-4 sm:gap-8 max-w-4xl">
           {t.aboutFacts.map((f) => (
             <div key={f.n} data-about-fade className="border-t border-ink/15 pt-4">
               <dt className="font-serif [font-variant-numeric:lining-nums] text-[2.4rem] sm:text-6xl leading-none tracking-[-0.02em] text-forest">{f.n}</dt>
