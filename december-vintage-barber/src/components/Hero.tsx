@@ -91,18 +91,23 @@ function Wordmark({ id }: { id: string }) {
         </svg>
         {box && (
           <span ref={fill} className="absolute inset-0" style={{ clipPath: `url(#${id})` }}>
-            {/* The clip behind as a reflection: upside down, black and white */}
-            <video
-              src={inside.src}
-              poster={inside.poster}
-              muted
-              loop
-              playsInline
-              preload="none"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            {/* Tint in the text colour keeps the word legible on paper and over video */}
-            <span className="absolute inset-0 bg-current opacity-30" />
+            {/* Kept a few pixels off the clip box's edges: Chrome rasterises the clip coarsely and
+                otherwise leaks the box's top row as a hairline while the word scales on scroll.
+                The glyphs sit well inside the box (font ascent above, no descenders), so nothing is lost. */}
+            <span className="absolute inset-x-px inset-y-[3px]">
+              {/* The clip behind as a reflection: upside down, black and white */}
+              <video
+                src={inside.src}
+                poster={inside.poster}
+                muted
+                loop
+                playsInline
+                preload="none"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Tint in the text colour keeps the word legible on paper and over video */}
+              <span className="absolute inset-0 bg-current opacity-30" />
+            </span>
           </span>
         )}
       </span>
