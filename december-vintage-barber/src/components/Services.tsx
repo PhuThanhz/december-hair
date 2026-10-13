@@ -11,7 +11,7 @@ const PEOPLE: { id: string; image: string; focus: string; book?: Category }[] = 
   { id: "women", image: "/images/showcase-balayage-curls.png", focus: "50% 30%", book: "women" },
   { id: "men", image: "/images/barber-scissor-cut.webp", focus: "100% 40%", book: "men" },
   { id: "seniors", image: "/images/men-classic-fade.jpg", focus: "55% 25%" },
-  { id: "kids", image: "/images/haircut-kid-fade.png", focus: "62% 35%", book: "kids" },
+  { id: "kids", image: "/images/haircut-kid-fade.png", focus: "34% 35%", book: "kids" },
   { id: "care", image: "/images/service-hair-wash-massage.png", focus: "32% 40%", book: "spa" },
 ];
 
