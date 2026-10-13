@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Map as MLMap, Marker } from "maplibre-gl";
+import type { GeoJSONSource, Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { BRANCHES } from "@/app/data";
 
@@ -19,8 +19,8 @@ const OVERVIEW: [[number, number], [number, number]] = [
 
 const PALETTE = {
   land: "#f4f3ee",
-  park: "#dde6d5",
-  wood: "#d3dec9",
+  park: "#cfdec3",
+  wood: "#c4d6b6",
   water: "#c9d8cf",
   building: "#e6e5dc",
   road: "#ffffff",
@@ -78,13 +78,77 @@ function recolor(map: MLMap) {
       "source-layer": "building",
       minzoom: 14,
       paint: {
-        "fill-extrusion-color": "#e3e2d8",
+        "fill-extrusion-color": "#dcdbcf",
         "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": 0.85,
+        "fill-extrusion-opacity": 0.9,
       },
     });
   }
+
+  // The salon's own shopping centre, lifted out in brand green, with a soft glow on the ground
+  if (!map.getSource("salon")) {
+    const empty = { type: "FeatureCollection" as const, features: [] };
+    map.addSource("salon", { type: "geojson", data: empty });
+    map.addSource("salon-point", { type: "geojson", data: empty });
+    map.addLayer(
+      {
+        id: "salon-glow",
+        type: "circle",
+        source: "salon-point",
+        paint: {
+          "circle-color": "#3f6b2c",
+          "circle-opacity": 0.16,
+          "circle-blur": 0.6,
+          "circle-pitch-alignment": "map",
+          "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 12, 18, 17, 260],
+        },
+      },
+      "building-3d"
+    );
+    map.addLayer({
+      id: "salon-building",
+      type: "fill-extrusion",
+      source: "salon",
+      paint: {
+        "fill-extrusion-color": "#3f6b2c",
+        "fill-extrusion-height": ["+", ["coalesce", ["get", "render_height"], 8], 0.6],
+        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+        "fill-extrusion-opacity": 0.92,
+      },
+    });
+  }
+}
+
+/** Light up the building under the salon's pin (and the ground around it); null clears it. */
+function highlight(map: MLMap, coords: [number, number] | null) {
+  const point = map.getSource("salon-point") as GeoJSONSource | undefined;
+  const building = map.getSource("salon") as GeoJSONSource | undefined;
+  if (!point || !building) return;
+  if (!coords) {
+    point.setData({ type: "FeatureCollection", features: [] });
+    building.setData({ type: "FeatureCollection", features: [] });
+    return;
+  }
+  point.setData({ type: "Feature", geometry: { type: "Point", coordinates: coords }, properties: {} });
+  const at = map.project(coords);
+  // A large centre is split across tiles, so take every building part within a few pixels of the pin
+  const parts = map.queryRenderedFeatures(
+    [
+      [at.x - 6, at.y - 6],
+      [at.x + 6, at.y + 6],
+    ],
+    { layers: ["building-3d"] }
+  );
+  building.setData({
+    type: "FeatureCollection",
+    // Plain copies: rendered features are live tile objects the GeoJSON worker can't receive
+    features: parts.map((f) => ({
+      type: "Feature",
+      geometry: JSON.parse(JSON.stringify(f.geometry)),
+      properties: { ...f.properties },
+    })),
+  });
 }
 
 /** Swap between the drawn map and the aerial photo; labels flip to white so they stay legible. */
@@ -92,6 +156,7 @@ function setAerial(map: MLMap, on: boolean) {
   if (!map.getLayer("ortho")) return;
   map.setLayoutProperty("ortho", "visibility", on ? "visible" : "none");
   map.setLayoutProperty("building-3d", "visibility", on ? "none" : "visible");
+  map.setLayoutProperty("salon-building", "visibility", on ? "none" : "visible");
   for (const layer of map.getStyle().layers ?? []) {
     if (layer.type !== "symbol") continue;
     try {
@@ -215,7 +280,9 @@ export default function BranchMap({
     );
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const b = BRANCHES.find((x) => x.id === active);
+    highlight(m, null);
     if (b) {
+      m.once("moveend", () => highlight(m, b.coords));
       m.flyTo({
         center: b.coords,
         zoom: 16.2,

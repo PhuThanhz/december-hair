@@ -154,37 +154,39 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
               {BRANCHES.map((b) => {
                 const on = active === b.id;
                 return (
-                  <li key={b.id} data-branch className="relative border-b border-ink/15 pl-6">
-                    <span
-                      className={`absolute left-0 top-0 h-full w-[3px] bg-moss origin-top transition-transform duration-700 ease-[var(--ease-out-quint)] ${
-                        on ? "scale-y-100" : "scale-y-0"
-                      }`}
-                    />
+                  <li
+                    key={b.id}
+                    data-branch
+                    className={`relative border-b px-6 transition-colors duration-500 ${
+                      on ? "bg-forest text-paper border-forest" : "border-ink/15 hover:bg-bone/60"
+                    }`}
+                  >
                     <button
                       onClick={() => setActive(on ? null : b.id)}
-                      className="w-full text-left cursor-pointer pt-7 pb-3 group"
+                      className="w-full text-left cursor-pointer pt-7 pb-3 group flex items-baseline justify-between gap-4"
                       aria-pressed={on}
                     >
                       <span
                         className={`block font-serif text-4xl sm:text-[2.75rem] leading-none tracking-[-0.02em] transition-colors duration-300 ${
-                          on ? "text-moss" : "group-hover:text-moss"
+                          on ? "text-paper" : "group-hover:text-moss"
                         }`}
                       >
                         {b.city}
                       </span>
+                      <span className={`label tabular-nums ${on ? "text-sage" : "text-ink-soft"}`}>{b.hours}</span>
                     </button>
 
-                    <div className="pb-7 text-sm text-ink-soft space-y-1">
-                      <p className="text-ink">
-                        {b.mall} <span className="text-ink-soft">· {b.hours}</span>
-                      </p>
+                    <div className={`pb-7 text-sm space-y-1 ${on ? "text-paper/70" : "text-ink-soft"}`}>
+                      <p className={on ? "text-paper" : "text-ink"}>{b.mall}</p>
                       <p>{b.address}</p>
                       <div className="flex flex-wrap items-center gap-2.5 pt-4">
                         <a
                           href={directionsUrl(b)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-full bg-forest text-paper pl-3.5 pr-4 py-2.5 hover:bg-moss transition-colors"
+                          className={`inline-flex items-center gap-2 rounded-full pl-3.5 pr-4 py-2.5 transition-colors ${
+                            on ? "bg-paper text-forest hover:bg-sage" : "bg-forest text-paper hover:bg-moss"
+                          }`}
                         >
                           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                             <path d="M12 21s-7-6.2-7-11.5a7 7 0 1 1 14 0C19 14.8 12 21 12 21Z" />
@@ -194,7 +196,9 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                         </a>
                         <a
                           href={`tel:${b.phoneRaw}`}
-                          className="inline-flex items-center gap-2 rounded-full border border-ink/20 text-ink pl-3.5 pr-4 py-2.5 hover:border-ink transition-colors tabular-nums"
+                          className={`inline-flex items-center gap-2 rounded-full border pl-3.5 pr-4 py-2.5 transition-colors tabular-nums ${
+                            on ? "border-paper/30 text-paper hover:border-paper" : "border-ink/20 text-ink hover:border-ink"
+                          }`}
                         >
                           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                             <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
@@ -203,7 +207,9 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                         </a>
                         <button
                           onClick={() => onBook(b.id)}
-                          className="cursor-pointer rounded-full border border-ink/20 text-ink px-4 py-2.5 hover:border-ink transition-colors"
+                          className={`cursor-pointer rounded-full border px-4 py-2.5 transition-colors ${
+                            on ? "border-paper/30 text-paper hover:border-paper" : "border-ink/20 text-ink hover:border-ink"
+                          }`}
                         >
                           {t.book} →
                         </button>
