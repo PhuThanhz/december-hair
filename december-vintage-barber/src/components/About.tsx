@@ -9,23 +9,35 @@ const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
 const CYCLE = 5000; // ms each clip plays before the next
 
-// The mirror is drawn on a 520 × 700 grid so the arched niche, the glass, its LED ring
-// and the curved words above it all line up at any size.
-const GRID = { w: 520, h: 700 };
+// The doorway is drawn on a 520 × 680 grid so the D-shaped niche, the glass, its LED ring
+// and the logo's hairline strands all line up at any size.
+const GRID = { w: 520, h: 680 };
 const box = (x: number, y: number, w: number, h: number) => ({
   left: `${(x / GRID.w) * 100}%`,
   top: `${(y / GRID.h) * 100}%`,
   width: `${(w / GRID.w) * 100}%`,
   height: `${(h / GRID.h) * 100}%`,
 });
-const ARCH = "9999px 9999px 0 0"; // round top, square bottom
-// Arch centre (260, 280): niche radius 220, words ride 32 units outside it
-const WORD_PATH = "M 8 280 A 252 252 0 0 1 512 280";
+// The December "D": a bold straight stem on the left and a bowl bulging out to the right.
+// Every layer's bowl is a half-ellipse around the same centre, so the curves run parallel.
+const D = { cx: 135, cy: 340, rx: 315, ry: 300 };
+/** A D-shaped layer `inset` units inside the niche, starting at `left` (a thicker stem on the left). */
+const dLayer = (left: number, inset: number) => {
+  const rx = D.rx - inset;
+  const ry = D.ry - inset;
+  const w = D.cx + rx - left;
+  return {
+    ...box(left, D.cy - ry, w, ry * 2),
+    borderRadius: `0 ${(rx / w) * 100}% ${(rx / w) * 100}% 0 / 0 50% 50% 0`,
+  };
+};
+// Like the logo, the strands all leave the top of the stem and meet again at its foot, fanning out between.
+const STRANDS = [1, 2, 3, 4, 5].map((k) => `M ${D.cx} ${D.cy - D.ry} A ${D.rx + k * 13} ${D.ry} 0 0 1 ${D.cx} ${D.cy + D.ry}`);
 
 /**
- * "Three salons, one team", told through the salon's own signature: an arched mirror with
- * an LED halo, set in a green niche. Scrolling in switches the mirror on; the three verbs
- * curve along the arch and the lit one is the clip playing in the glass.
+ * "Three salons, one team", seen through a doorway shaped like the December "D". Scrolling in
+ * switches its LED halo on and draws the logo's hairline strands around the bowl; the clip
+ * in the glass is the verb lit underneath (cut, colour, care).
  */
 export default function About({ t }: { t: Dict }) {
   const root = useRef<HTMLElement | null>(null);
@@ -54,7 +66,9 @@ export default function About({ t }: { t: Dict }) {
             { keyframes: [{ autoAlpha: 0.7, duration: 0.08 }, { autoAlpha: 0.15, duration: 0.1 }, { autoAlpha: 1, duration: 0.5 }] },
             0.8
           )
-          .fromTo("[data-arc]", { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out" }, 1)
+          // The logo's strands draw themselves around the bowl
+          .fromTo("[data-strand]", { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", stagger: 0.08 }, 0.9)
+          .fromTo("[data-verbs]", { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out" }, 1.1)
           .fromTo("[data-about-line]", { yPercent: 110 }, { yPercent: 0, duration: 1.1, ease: EASE, stagger: 0.1 }, 0.2)
           .fromTo("[data-about-fade]", { autoAlpha: 0, y: 14 }, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 }, 0.5);
       });
@@ -81,17 +95,34 @@ export default function About({ t }: { t: Dict }) {
           </p>
         </div>
 
-        {/* The mirror */}
+        {/* The D doorway */}
         <div className="col-span-12 sm:col-span-8 sm:col-start-3 lg:col-span-4 lg:col-start-5">
           <div data-mirror-wrap className="relative mx-auto w-full max-w-[460px]" style={{ aspectRatio: `${GRID.w} / ${GRID.h}` }}>
-            <div data-niche className="absolute bg-forest" style={{ ...box(40, 60, 440, 630), borderRadius: ARCH }} />
+            <svg viewBox={`0 0 ${GRID.w} ${GRID.h}`} className="absolute inset-0 w-full h-full overflow-visible" aria-hidden>
+              {STRANDS.map((d, i) => (
+                <path
+                  key={d}
+                  data-strand
+                  d={d}
+                  pathLength={1}
+                  strokeDasharray={1}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  className="text-forest"
+                  style={{ opacity: 0.55 - i * 0.09 }}
+                />
+              ))}
+            </svg>
+            <div data-niche className="absolute bg-forest" style={dLayer(30, 0)} />
             <div
               data-led
               aria-hidden
               className="absolute border-2 border-[#fffaf0]/90 shadow-[0_0_8px_1px_rgba(255,246,222,0.8),0_0_22px_2px_rgba(255,246,222,0.28),inset_0_0_10px_1px_rgba(255,246,222,0.5)]"
-              style={{ ...box(57, 77, 406, 596), borderRadius: ARCH }}
+              style={dLayer(88, 17)}
             />
-            <div data-glass className="absolute overflow-hidden bg-forest-2" style={{ ...box(64, 84, 392, 582), borderRadius: ARCH }}>
+            <div data-glass className="absolute overflow-hidden bg-forest-2" style={dLayer(95, 24)}>
               {CLIPS.map((c) => (
                 <video
                   key={c}
@@ -107,34 +138,22 @@ export default function About({ t }: { t: Dict }) {
                 />
               ))}
             </div>
+          </div>
 
-            {/* The verbs ride the curve of the arch; the lit one is playing */}
-            <svg data-arc viewBox={`0 0 ${GRID.w} ${GRID.h}`} className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
-              <defs>
-                <path id="about-arch" d={WORD_PATH} />
-              </defs>
-              <text className="font-serif italic" fontSize="25" letterSpacing="1">
-                <textPath href="#about-arch" startOffset="50%" textAnchor="middle">
-                  {CLIPS.map((c, i) => (
-                    <tspan key={c}>
-                      {i > 0 && <tspan className="fill-ink/25">{"  ·  "}</tspan>}
-                      <tspan
-                        role="button"
-                        tabIndex={0}
-                        aria-pressed={c === active}
-                        onClick={() => setActive(c)}
-                        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setActive(c)}
-                        className={`pointer-events-auto cursor-pointer outline-none transition-[fill] duration-500 ${
-                          c === active ? "fill-moss" : "fill-ink/35 hover:fill-ink"
-                        }`}
-                      >
-                        {t.aboutVerbs[i]}
-                      </tspan>
-                    </tspan>
-                  ))}
-                </textPath>
-              </text>
-            </svg>
+          {/* The lit verb is the clip in the glass */}
+          <div data-verbs className="mt-6 flex items-baseline justify-center gap-3 font-serif italic text-2xl sm:text-[1.7rem]">
+            {CLIPS.map((c, i) => (
+              <span key={c} className="flex items-baseline gap-3">
+                {i > 0 && <span className="text-ink/25">·</span>}
+                <button
+                  onClick={() => setActive(c)}
+                  aria-pressed={c === active}
+                  className={`cursor-pointer transition-colors duration-500 ${c === active ? "text-moss" : "text-ink/35 hover:text-ink"}`}
+                >
+                  {t.aboutVerbs[i]}
+                </button>
+              </span>
+            ))}
           </div>
         </div>
 
