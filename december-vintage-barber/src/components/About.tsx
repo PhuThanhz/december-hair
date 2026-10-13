@@ -2,107 +2,76 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Dict } from "@/app/data";
-import { gsap, useGSAP, MQ_MOTION } from "@/lib/gsap";
+import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 import { playWhileVisible } from "@/lib/video";
 
 const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
-const CYCLE = 4200; // ms each verb stays lit
+const CYCLE = 5000; // ms each clip plays before the next
 
 /**
- * One large statement. Its three verbs (cut, colour, care) are live: the lit
- * one plays its clip in the frame beside the text, cycling on its own, and
- * hovering a verb shows that clip straight away.
+ * Who we are in one line, three facts that matter (how many salons, open every day,
+ * how late), and a short film of the work. The clips advance like stories; the
+ * tabs under the frame show progress and jump straight to a clip.
  */
 export default function About({ t }: { t: Dict }) {
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<Clip>("cut");
-  const [paused, setPaused] = useState(false);
 
   // Only the visible clip plays, and only while the section is on screen
   useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
 
-  // Auto-cycle the verbs unless the visitor is pointing at one
+  // Advance to the next clip; restarting the timer whenever the visitor picks one
   useEffect(() => {
-    if (paused) return;
-    const id = window.setTimeout(() => {
-      setActive((a) => CLIPS[(CLIPS.indexOf(a) + 1) % CLIPS.length]);
-    }, CYCLE);
+    const id = window.setTimeout(() => setActive((a) => CLIPS[(CLIPS.indexOf(a) + 1) % CLIPS.length]), CYCLE);
     return () => window.clearTimeout(id);
-  }, [active, paused]);
+  }, [active]);
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
       mm.add(MQ_MOTION, () => {
         const tl = gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top 70%" } });
-        tl.from("[data-word]", { autoAlpha: 0, filter: "blur(10px)", duration: 1.1, ease: "power2.out", stagger: 0.05 })
-          .from("[data-about-frame]", { autoAlpha: 0, scale: 0.94, duration: 1.6, ease: "power3.out" }, 0.2)
-          .from("[data-about-note]", { autoAlpha: 0, duration: 1 }, 1);
+        tl.fromTo("[data-about-line]", { yPercent: 110 }, { yPercent: 0, duration: 1.2, ease: EASE, stagger: 0.1 })
+          .fromTo("[data-about-fade]", { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08 }, 0.3)
+          .fromTo("[data-about-frame]", { clipPath: "inset(100% 0% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.3, ease: "expo.out" }, 0.15);
       });
       return () => mm.revert();
     },
     { scope: root }
   );
 
-  // "… [cut|Stříháme], [colour|barvíme] …" → plain words and live verbs
-  const parts = t.aboutRich.split(/(\[\w+\|[^\]]+\])/).filter(Boolean);
-
   return (
     <section ref={root} className="relative bg-paper px-5 sm:px-8 lg:px-12 py-28 sm:py-36">
-      <div className="mx-auto max-w-[1600px] grid grid-cols-12 gap-x-8 gap-y-14 items-center">
-        <div className="col-span-12 lg:col-span-7">
-          <p className="font-serif text-[11vw] sm:text-[7.5vw] lg:text-[4.9vw] leading-[1.06] tracking-[-0.025em]">
-            {parts.map((part, i) => {
-              const m = part.match(/^\[(\w+)\|([^\]]+)\]$/);
-              if (m) {
-                const key = m[1] as Clip;
-                const on = key === active;
-                return (
-                  <span
-                    key={i}
-                    data-word
-                    onMouseEnter={() => {
-                      setActive(key);
-                      setPaused(true);
-                    }}
-                    onMouseLeave={() => setPaused(false)}
-                    className={`relative inline-block cursor-default italic transition-colors duration-500 ${on ? "text-moss" : "text-ink"}`}
-                  >
-                    {m[2]}
-                    {/* Underline doubles as the timer for the lit verb */}
-                    <span className="absolute left-0 right-0 -bottom-[0.04em] h-[2px] bg-ink/10 overflow-hidden">
-                      <span
-                        key={on ? `${active}-${paused}` : "off"}
-                        className="block h-full bg-moss origin-left"
-                        style={{
-                          transform: on ? undefined : "scaleX(0)",
-                          animation: on && !paused ? `aboutTimer ${CYCLE}ms linear forwards` : undefined,
-                        }}
-                      />
-                    </span>
-                  </span>
-                );
-              }
-              return part.split(/(\s+)/).map((w, j) =>
-                w.trim() ? (
-                  <span key={`${i}-${j}`} data-word className="inline-block">
-                    {w}
-                  </span>
-                ) : (
-                  w
-                )
-              );
-            })}
+      <div className="mx-auto max-w-[1600px] grid grid-cols-12 gap-x-8 gap-y-16 items-center">
+        <div className="col-span-12 lg:col-span-6">
+          <h2 className="font-serif text-6xl sm:text-7xl lg:text-[5.5rem] leading-[0.98] tracking-[-0.03em]">
+            {t.aboutTitle.map((line, i) => (
+              <span key={i} className="line-mask">
+                <span data-about-line className={`block ${i === 1 ? "italic text-moss" : ""}`}>
+                  {line}
+                </span>
+              </span>
+            ))}
+          </h2>
+          <p data-about-fade className="mt-8 max-w-md text-lg leading-relaxed text-ink-soft">
+            {t.aboutText}
           </p>
-          <p data-about-note className="mt-10 text-lg text-ink-soft max-w-md">
-            {t.aboutNote}
-          </p>
+
+          {/* The facts a visitor actually needs */}
+          <dl className="mt-14 grid grid-cols-3 gap-4 sm:gap-6 border-t border-ink/15 pt-8 max-w-xl">
+            {t.aboutFacts.map((f) => (
+              <div key={f.n} data-about-fade>
+                <dt className="font-serif [font-variant-numeric:lining-nums] text-[2.4rem] sm:text-6xl leading-none tracking-[-0.02em] text-forest">{f.n}</dt>
+                <dd className="mt-3 text-sm leading-snug text-ink-soft">{f.l}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
 
-        {/* The clip for the lit verb */}
-        <div className="col-span-12 sm:col-span-8 sm:col-start-3 lg:col-span-5 lg:col-start-8">
-          <div data-about-frame className="relative aspect-[4/5] overflow-hidden bg-bone rounded-3xl shadow-xl border border-forest/10">
+        {/* The work, as short stories */}
+        <div className="col-span-12 sm:col-span-8 sm:col-start-3 lg:col-span-4 lg:col-start-9">
+          <div data-about-frame className="relative aspect-[4/5] overflow-hidden bg-bone rounded-[2px]">
             {CLIPS.map((c) => (
               <video
                 key={c}
@@ -113,15 +82,37 @@ export default function About({ t }: { t: Dict }) {
                 loop
                 playsInline
                 preload="none"
-                className={`absolute inset-0 w-full h-full object-cover transition-[opacity,transform] duration-[900ms] ease-[var(--ease-out-quint)] ${
-                  c === active ? "opacity-100 scale-100" : "opacity-0 scale-[1.06]"
+                aria-label={t.aboutClips[c]}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+                  c === active ? "opacity-100" : "opacity-0"
                 }`}
               />
             ))}
-            <div className="absolute left-0 right-0 bottom-0 p-5 flex items-end justify-between text-paper bg-gradient-to-t from-forest/80 to-transparent">
-              <span className="font-serif italic text-3xl drop-shadow-sm">{t.aboutClips[active]}</span>
-              <span className="label tabular-nums">0{CLIPS.indexOf(active) + 1} / 03</span>
-            </div>
+          </div>
+          <div data-about-fade className="mt-4 grid grid-cols-3 gap-3" role="tablist">
+            {CLIPS.map((c) => {
+              const on = c === active;
+              return (
+                <button
+                  key={c}
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setActive(c)}
+                  className="group cursor-pointer text-left"
+                >
+                  <span className="block h-[2px] bg-ink/12 overflow-hidden">
+                    <span
+                      key={on ? active : "off"}
+                      className="block h-full bg-moss origin-left"
+                      style={{ transform: on ? undefined : "scaleX(0)", animation: on ? `aboutTimer ${CYCLE}ms linear forwards` : undefined }}
+                    />
+                  </span>
+                  <span className={`mt-2 block text-sm transition-colors ${on ? "text-ink" : "text-ink-soft group-hover:text-ink"}`}>
+                    {t.aboutClips[c]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
