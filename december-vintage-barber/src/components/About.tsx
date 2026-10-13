@@ -174,8 +174,10 @@ export default function About({ t }: { t: Dict }) {
                     }`}
                   />
                   <span
-                    className={`relative block font-serif font-black italic leading-[0.92] tracking-[-0.035em] text-[19vw] sm:text-[16vw] lg:text-[10.5vw] pb-[0.06em] pl-[0.02em] ${
-                      on ? "bg-white text-black mix-blend-screen" : "bg-paper text-outline [--stroke:rgba(15,26,18,0.28)]"
+                    className={`relative block font-serif font-black italic leading-none tracking-[-0.035em] text-[19vw] sm:text-[16vw] lg:text-[10.5vw] pt-[0.1em] pb-[0.26em] pl-[0.02em] ${
+                      // Room above for č/í and below for j/p; inactive words are a soft solid tint (an outline
+                      // stroke shows the variable font's overlapping contours as stray lines)
+                      on ? "bg-white text-black mix-blend-screen" : "bg-paper text-forest/12 hover:text-forest/25"
                     }`}
                   >
                     {t.aboutVerbs[i]}
