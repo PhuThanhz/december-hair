@@ -13,10 +13,17 @@
   --color-sage: #9db08f;
   --color-chrome: #c8cbc4;
 
-  --font-serif: var(--font-bodoni), "Didot", "Bodoni 72", Georgia, serif;
+  --font-serif: var(--font-serif-face), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-schibsted), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Serif text reads best semibold; explicit weight utilities (font-normal, font-black…) still win */
+@layer base {
+  .font-serif {
+    font-weight: 600;
+  }
 }
 
 html.lenis,

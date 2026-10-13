@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Bodoni_Moda, Schibsted_Grotesk } from "next/font/google";
+import { Source_Serif_4, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
-// Didone serif, matching the December wordmark; opsz keeps small sizes from going spindly
-const bodoni = Bodoni_Moda({
-  variable: "--font-bodoni",
+// Sturdy, low-contrast serif: Czech accents (ř, č, ě, ů) stay clear at every size; opsz tunes it per size
+const serif = Source_Serif_4({
+  variable: "--font-serif-face",
   axes: ["opsz"],
   subsets: ["latin", "latin-ext"],
   style: ["normal", "italic"],
@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="cs" className={`${bodoni.variable} ${schibsted.variable}`}>
+    <html lang="cs" className={`${serif.variable} ${schibsted.variable}`}>
       <body className="bg-paper text-ink antialiased min-h-screen">{children}</body>
     </html>
   );
