@@ -78,7 +78,9 @@ function recolor(map: MLMap) {
       "source-layer": "building",
       minzoom: 14,
       paint: {
-        "fill-extrusion-color": "#dcdbcf",
+        // The salon's own centre turns brand green (set per building via feature-state, so it's the same
+        // block recoloured rather than a second one on top, which flickered where the walls overlapped)
+        "fill-extrusion-color": ["case", ["boolean", ["feature-state", "salon"], false], "#4a7a36", "#dcdbcf"],
         "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
         "fill-extrusion-opacity": 1,
@@ -86,11 +88,9 @@ function recolor(map: MLMap) {
     });
   }
 
-  // The salon's own shopping centre, lifted out in brand green, with a soft glow on the ground
-  if (!map.getSource("salon")) {
-    const empty = { type: "FeatureCollection" as const, features: [] };
-    map.addSource("salon", { type: "geojson", data: empty });
-    map.addSource("salon-point", { type: "geojson", data: empty });
+  // A soft glow on the ground around the salon
+  if (!map.getSource("salon-point")) {
+    map.addSource("salon-point", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer(
       {
         id: "salon-glow",
@@ -106,28 +106,18 @@ function recolor(map: MLMap) {
       },
       "building-3d"
     );
-    map.addLayer({
-      id: "salon-building",
-      type: "fill-extrusion",
-      source: "salon",
-      paint: {
-        "fill-extrusion-color": "#3f6b2c",
-        "fill-extrusion-height": ["+", ["coalesce", ["get", "render_height"], 8], 0.6],
-        "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": 1,
-      },
-    });
   }
 }
+
+const BUILDINGS = { source: "openmaptiles", sourceLayer: "building" } as const;
 
 /** Light up the building under the salon's pin (and the ground around it); null clears it. */
 function highlight(map: MLMap, coords: [number, number] | null) {
   const point = map.getSource("salon-point") as GeoJSONSource | undefined;
-  const building = map.getSource("salon") as GeoJSONSource | undefined;
-  if (!point || !building) return;
+  if (!point) return;
+  map.removeFeatureState(BUILDINGS);
   if (!coords) {
     point.setData({ type: "FeatureCollection", features: [] });
-    building.setData({ type: "FeatureCollection", features: [] });
     return;
   }
   point.setData({ type: "Feature", geometry: { type: "Point", coordinates: coords }, properties: {} });
@@ -140,15 +130,7 @@ function highlight(map: MLMap, coords: [number, number] | null) {
     ],
     { layers: ["building-3d"] }
   );
-  building.setData({
-    type: "FeatureCollection",
-    // Plain copies: rendered features are live tile objects the GeoJSON worker can't receive
-    features: parts.map((f) => ({
-      type: "Feature",
-      geometry: JSON.parse(JSON.stringify(f.geometry)),
-      properties: { ...f.properties },
-    })),
-  });
+  for (const f of parts) if (f.id !== undefined) map.setFeatureState({ ...BUILDINGS, id: f.id }, { salon: true });
 }
 
 /** Swap between the drawn map and the aerial photo; labels flip to white so they stay legible. */
@@ -156,7 +138,6 @@ function setAerial(map: MLMap, on: boolean) {
   if (!map.getLayer("ortho")) return;
   map.setLayoutProperty("ortho", "visibility", on ? "visible" : "none");
   map.setLayoutProperty("building-3d", "visibility", on ? "none" : "visible");
-  map.setLayoutProperty("salon-building", "visibility", on ? "none" : "visible");
   for (const layer of map.getStyle().layers ?? []) {
     if (layer.type !== "symbol") continue;
     // Road-number shields are white plates: white text would vanish, so they step aside on the photo
