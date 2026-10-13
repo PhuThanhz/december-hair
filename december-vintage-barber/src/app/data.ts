@@ -213,7 +213,7 @@ export const T = {
       sluzby: "Ženy · Muži · Děti · Péče",
       cenik: "od {price} Kč · spočítejte si návštěvu",
       salon: "Proměny z našich křesel",
-      poukazy: "1 000 nebo 3 000 Kč, platí 12 měsíců",
+      poukazy: "1 000 nebo 3 000 Kč, platí 12 měsíců",
       pobocky: "Praha · Kladno · Mladá Boleslav",
     } as Record<string, string>,
     menuOpenNow: "Otevřeno · do {time}",
@@ -304,7 +304,7 @@ export const T = {
     vouchersLabel: "Dárek",
     vouchersTitle: "Dárkový poukaz",
     vouchersBody:
-      "Poukaz v hodnotě 1 000 nebo 3 000 Kč, platný 12 měsíců ve všech třech salonech. Zakoupíte ho na recepci.",
+      "Poukaz v hodnotě 1 000 nebo 3 000 Kč, platný 12 měsíců ve všech třech salonech. Zakoupíte ho na recepci.",
     vouchersCta: "Objednat poukaz",
 
     branchesTitle: "Pobočky",
@@ -352,7 +352,7 @@ export const T = {
       sluzby: "Women · Men · Kids · Care",
       cenik: "from {price} CZK · build your visit",
       salon: "Transformations from our chairs",
-      poukazy: "1,000 or 3,000 CZK, valid 12 months",
+      poukazy: "1,000 or 3,000 CZK, valid 12 months",
       pobocky: "Prague · Kladno · Mladá Boleslav",
     } as Record<string, string>,
     menuOpenNow: "Open · until {time}",
@@ -442,7 +442,7 @@ export const T = {
     vouchersLabel: "Gift",
     vouchersTitle: "Gift voucher",
     vouchersBody:
-      "A voucher worth 1,000 or 3,000 CZK, valid for 12 months at all three salons. Available at reception.",
+      "A voucher worth 1,000 or 3,000 CZK, valid for 12 months at all three salons. Available at reception.",
     vouchersCta: "Order a voucher",
 
     branchesTitle: "Locations",

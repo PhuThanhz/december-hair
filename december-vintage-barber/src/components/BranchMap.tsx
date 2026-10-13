@@ -81,7 +81,7 @@ function recolor(map: MLMap) {
         "fill-extrusion-color": "#dcdbcf",
         "fill-extrusion-height": ["coalesce", ["get", "render_height"], 8],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": 0.9,
+        "fill-extrusion-opacity": 1,
       },
     });
   }
@@ -114,7 +114,7 @@ function recolor(map: MLMap) {
         "fill-extrusion-color": "#3f6b2c",
         "fill-extrusion-height": ["+", ["coalesce", ["get", "render_height"], 8], 0.6],
         "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-        "fill-extrusion-opacity": 0.92,
+        "fill-extrusion-opacity": 1,
       },
     });
   }
@@ -235,6 +235,8 @@ export default function BranchMap({
         attributionControl: { compact: true },
         cooperativeGestures: touch,
         pitchWithRotate: true,
+        // Drawing 3D buildings at full Retina density is the costliest part of the orbit; 1.5x looks the same
+        pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
         });
       } catch {
         setFailed(true);

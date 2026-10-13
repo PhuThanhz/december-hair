@@ -123,9 +123,9 @@ export default function Voucher({ t, onBook }: { t: Dict; onBook: () => void }) 
           </p>
 
           <div data-v-fade className="mt-12 grid grid-cols-2 border-t border-paper/15 max-w-md">
-            {["1 000", "3 000"].map((v, i) => (
-              <div key={v} className={`pt-5 ${i ? "pl-6 border-l border-paper/15" : ""}`}>
-                <span className="font-serif text-5xl sm:text-6xl tabular-nums tracking-tight">{v}</span>
+            {["1\u00a0000", "3\u00a0000"].map((v, i) => (
+              <div key={v} className={`pt-5 whitespace-nowrap ${i ? "pl-6 border-l border-paper/15" : ""}`}>
+                <span className="font-serif text-5xl md:text-4xl lg:text-5xl xl:text-6xl tabular-nums tracking-tight">{v}</span>
                 <span className="ml-2 text-sm text-paper/50">Kč</span>
               </div>
             ))}
