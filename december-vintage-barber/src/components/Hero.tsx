@@ -71,7 +71,8 @@ function Wordmark({ id }: { id: string }) {
   // The clip inside only exists once measured, so it registers its own play-while-visible
   useEffect(() => (box && fill.current ? playWhileVisible(fill.current) : undefined), [box]);
 
-  const [x, y, w, h] = box ?? [0, -150, 1180, 190];
+  // Until measured, use the real Source Serif 4 box so the hero doesn't jump when the font lands
+  const [x, y, w, h] = box ?? [0, -206.87, 791.73, 274.13];
   // Pre-rendered: the centre clip's middle band, flipped upside down and in black and white, so the
   // browser only decodes a small video (no CSS filter or transform to redo every frame)
   const inside = { src: "/videos/europark-reflection.mp4", poster: "/videos/europark-reflection-poster.jpg" };

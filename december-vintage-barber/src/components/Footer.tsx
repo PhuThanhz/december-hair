@@ -87,7 +87,7 @@ export default function Footer({ t }: { t: Dict }) {
             {/* Dual Balanced Social Channels: Instagram & Facebook */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
               {/* Instagram Card */}
-              <div className="flex items-center gap-3 bg-paper/[0.04] border border-paper/15 p-3 sm:p-4 rounded-2xl sm:rounded-3xl backdrop-blur-sm hover:border-paper/30 transition-all duration-300">
+              <div className="flex items-center gap-3 bg-paper/[0.06] border border-paper/15 p-3 sm:p-4 rounded-2xl sm:rounded-3xl hover:border-paper/30 transition-all duration-300">
                 <div className="relative w-11 h-11 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-sm shrink-0">
                   <div className="w-full h-full rounded-full bg-forest flex items-center justify-center">
                     <InstagramIcon className="w-5 h-5 text-paper" />
@@ -118,7 +118,7 @@ export default function Footer({ t }: { t: Dict }) {
               </div>
 
               {/* Facebook Card (Equally Prominent) */}
-              <div className="flex items-center gap-3 bg-paper/[0.04] border border-paper/15 p-3 sm:p-4 rounded-2xl sm:rounded-3xl backdrop-blur-sm hover:border-paper/30 transition-all duration-300">
+              <div className="flex items-center gap-3 bg-paper/[0.06] border border-paper/15 p-3 sm:p-4 rounded-2xl sm:rounded-3xl hover:border-paper/30 transition-all duration-300">
                 <div className="relative w-11 h-11 rounded-full p-[2px] bg-[#1877F2] shadow-sm shrink-0">
                   <div className="w-full h-full rounded-full bg-forest flex items-center justify-center">
                     <FacebookIcon className="w-5 h-5 text-[#1877F2]" />
@@ -174,7 +174,7 @@ export default function Footer({ t }: { t: Dict }) {
                 {/* Subtle gradient overlay on hover with IG badge and stats */}
                 <div className="absolute inset-0 bg-gradient-to-t from-forest/90 via-forest/30 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3.5 sm:p-4 flex flex-col justify-between text-paper">
                   <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded-full bg-paper/20 backdrop-blur-md text-[10px] font-medium tracking-wide uppercase">
+                    <span className="px-2 py-0.5 rounded-full bg-forest/70 text-[10px] font-medium tracking-wide uppercase">
                       {item.tag}
                     </span>
                     <InstagramIcon className="w-3.5 h-3.5 text-paper/80" />

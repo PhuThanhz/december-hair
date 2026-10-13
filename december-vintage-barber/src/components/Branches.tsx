@@ -8,7 +8,8 @@ import { gsap, useGSAP, EASE, MQ_MOTION, ScrollTrigger } from "@/lib/gsap";
 import FastMarquee from "react-fast-marquee";
 
 // MapLibre (~320 KB + its CSS) only downloads once the map is about to scroll into view
-const BranchMap = dynamic(() => import("./BranchMap"), { ssr: false });
+const loadMap = () => import("./BranchMap");
+const BranchMap = dynamic(loadMap, { ssr: false });
 
 function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void }) {
   return (
@@ -61,6 +62,16 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
   const activeBranch = BRANCHES.find((b) => b.id === active);
   const mapBox = useRef<HTMLDivElement | null>(null);
   const [mapNear, setMapNear] = useState(false);
+
+  // Fetch and parse MapLibre while the browser is idle after load, so it doesn't stall the scroll
+  // when the map comes near. Skipped for visitors on data saver.
+  useEffect(() => {
+    const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+    if (nav.connection?.saveData) return;
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1));
+    const id = window.setTimeout(() => idle(() => void loadMap()), 4000);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     const el = mapBox.current;
