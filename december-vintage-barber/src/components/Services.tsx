@@ -6,12 +6,13 @@ import type { Category, Dict } from "@/app/data";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 
 // Who we look after, one mirror each. Prices live in the price list below, so this is about people.
-const PEOPLE: { id: string; image: string; book?: Category }[] = [
-  { id: "women", image: "/images/women-blonde-waves.webp", book: "women" },
-  { id: "men", image: "/images/men-hair-tattoo.webp", book: "men" },
-  { id: "seniors", image: "/images/men-classic-fade.jpg" },
-  { id: "kids", image: "/images/haircut-kid-fade.png", book: "kids" },
-  { id: "care", image: "/images/service-hair-wash-massage.png", book: "spa" },
+// `focus` keeps the head and face inside the frame when a mirror is narrow.
+const PEOPLE: { id: string; image: string; focus: string; book?: Category }[] = [
+  { id: "women", image: "/images/women-blonde-waves.webp", focus: "45% 40%", book: "women" },
+  { id: "men", image: "/images/men-hair-tattoo.webp", focus: "52% 35%", book: "men" },
+  { id: "seniors", image: "/images/men-classic-fade.jpg", focus: "55% 25%" },
+  { id: "kids", image: "/images/haircut-kid-fade.png", focus: "62% 35%", book: "kids" },
+  { id: "care", image: "/images/service-hair-wash-massage.png", focus: "32% 40%", book: "spa" },
 ];
 
 /**
@@ -72,7 +73,7 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                 onMouseEnter={() => setOpen(p.id)}
                 onClick={() => setOpen(p.id)}
                 className={`group relative overflow-hidden rounded-[2px] cursor-pointer transition-[flex-grow,height] duration-700 ease-[var(--ease-out-quint)] md:h-auto md:basis-0 ${
-                  on ? "h-[440px] md:grow-[4]" : "h-[76px] md:grow"
+                  on ? "h-[440px] md:grow-[2.6]" : "h-[76px] md:grow"
                 }`}
               >
                 <Image
@@ -80,8 +81,9 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                   alt={copy.name}
                   fill
                   quality={90}
-                  sizes="(max-width: 768px) 100vw, 55vw"
-                  className={`object-cover transition-transform duration-[1200ms] ease-[var(--ease-out-quint)] ${on ? "scale-100" : "scale-110"}`}
+                  sizes="(max-width: 768px) 100vw, 45vw"
+                  style={{ objectPosition: p.focus }}
+                  className="object-cover"
                 />
                 <div
                   className={`absolute inset-0 transition-colors duration-700 ${

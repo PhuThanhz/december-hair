@@ -1,62 +1,24 @@
-# DECEMBER HAIR - BỘ 3 BẢN DEMO WEBSITE SALON & BARBERSHOP
+# DECEMBER HAIR — WEBSITE SALON
 
-Dự án gồm **3 nguồn source Next.js (App Router + TypeScript + Tailwind CSS)** được định hình theo 3 phong cách thiết kế và đối tượng khách hàng khác nhau để trình chiếu cho chủ tiệm chọn lựa.
+Website cho salon December Hair (Praha · Kladno · Mladá Boleslav), viết bằng Next.js 16 (App Router + TypeScript + Tailwind CSS), song ngữ CZ / EN.
 
 ---
 
-## 💈 1. december-vintage-barber (Port 3001)
-- **Phong cách:** Classic Vintage / Luxury Gentlemen Barbershop
-- **Tông màu:** Gỗ trầm óc chó, nâu da thuộc, đen nhung, vàng đồng (Amber / Brass Gold).
-- **Cảm giác mang lại:** Đẳng cấp, chỉn chu, truyền thống quý ông Âu-Mỹ, uy tín lâu năm.
-- **Tính năng nổi bật định hướng:** Menu dịch vụ cạo râu/cắt tóc cổ điển, đặt lịch chọn thợ chuyên môn (Master Barber), hình ảnh retro sang trọng.
+## 💈 december-vintage-barber
+- **Phong cách:** editorial xanh rêu – trắng, lấy tông từ tường salon thật.
+- **Tính năng chính:** cảnh mở đầu 3 video, "Pro celou rodinu" (5 tấm gương theo từng nhóm khách), bảng giá tự tính tổng tiền & thời gian rồi đặt lịch, lookbook, reels, bản đồ 3 chi nhánh (Mapa / ảnh Letecká ČÚZK, nút Google Maps), poukaz.
 - **Khởi chạy:**
   ```bash
   cd december-vintage-barber
+  npm install
   npm run dev
-  # Mở tại: http://localhost:3001
+  # Mở tại: http://localhost:3004
   ```
-
----
-
-## ✨ 2. december-korean-salon (Port 3002)
-- **Phong cách:** Modern Minimalist / Korean & Japanese Aesthetic Hair Studio
-- **Tông màu:** Trắng ngà (Warm White), Beige, Nâu cát sáng, Xám xi măng nhạt, điểm nhấn pastel tinh tế.
-- **Cảm giác mang lại:** Nhẹ nhàng, sạch sẽ, thời thượng kiểu Seoul Salon, phục vụ cả nam & nữ (Uốn phồng, nhuộm trendy, chăm sóc tóc phục hồi).
-- **Tính năng nổi bật định hướng:** Bảng giá trong suốt, lookbook kiểu tóc theo mùa (Autumn/Winter Trend), form tư vấn & đặt lịch nhanh.
-- **Khởi chạy:**
-  ```bash
-  cd december-korean-salon
-  npm run dev
-  # Mở tại: http://localhost:3002
-  ```
-
----
-
-## ⚡ 3. december-urban-edge (Port 3003)
-- **Phong cách:** Streetwear / High-Contrast Urban Edge & Gen Z Culture
-- **Tông màu:** Deep Dark Mode (#0a0a0a), typography khổ lớn (Bold Brutalist/Industrial), điểm nhấn Neon Acid Lime / Electric Amber.
-- **Cảm giác mang lại:** Cá tính, phong cách đường phố, âm nhạc hip-hop/underground, chuyên các kiểu tóc fade sắc nét, uốn con sâu, dreadlock, mullet, tattoo hair.
-- **Tính năng nổi bật định hướng:** Thư viện clip/reel ngắn, bảng xếp hạng thợ trẻ, voucher thành viên, đặt lịch trực quan theo ca cắt.
-- **Khởi chạy:**
-  ```bash
-  cd december-urban-edge
-  npm run dev
-  # Mở tại: http://localhost:3003
-  ```
-
----
-
-## 🚀 Hướng Dẫn Chạy Cả 3 Bản Demo Cùng Lúc
-Mỗi source đã được cấu hình sẵn port riêng (3004, 3005, 3006) hoàn toàn không lo trùng lặp cổng:
-
-- Terminal 1: `cd december-vintage-barber && npm run dev` ➔ `http://localhost:3004`
-- Terminal 2: `cd december-korean-salon && npm run dev` ➔ `http://localhost:3005`
-- Terminal 3: `cd december-urban-edge && npm run dev` ➔ `http://localhost:3006`
 
 ---
 
 ## 🎨 Tài Nguyên Hình Ảnh & Logo Dùng Chung (`shared-assets/`)
-Toàn bộ hình ảnh thực tế từ tiệm đã được xử lý và đồng bộ vào thư mục `public/images/` của cả 3 project để dùng trực tiếp qua đường dẫn `/images/<tên-file>`:
+Toàn bộ hình ảnh thực tế từ tiệm đã được xử lý và đồng bộ vào thư mục `public/images/` của project để dùng trực tiếp qua đường dẫn `/images/<tên-file>`:
 
 ### 🏷️ Bộ Logo Brand:
 - `/images/logo.png`: Logo chữ "D" nguyên bản.
