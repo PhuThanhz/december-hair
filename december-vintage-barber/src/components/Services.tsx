@@ -8,8 +8,8 @@ import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 // Who we look after, one mirror each. Prices live in the price list below, so this is about people.
 // `focus` keeps the head and face inside the frame when a mirror is narrow.
 const PEOPLE: { id: string; image: string; focus: string; book?: Category }[] = [
-  { id: "women", image: "/images/women-blonde-waves.webp", focus: "45% 40%", book: "women" },
-  { id: "men", image: "/images/men-hair-tattoo.webp", focus: "52% 35%", book: "men" },
+  { id: "women", image: "/images/showcase-balayage-curls.png", focus: "50% 30%", book: "women" },
+  { id: "men", image: "/images/barber-scissor-cut.webp", focus: "100% 40%", book: "men" },
   { id: "seniors", image: "/images/men-classic-fade.jpg", focus: "55% 25%" },
   { id: "kids", image: "/images/haircut-kid-fade.png", focus: "62% 35%", book: "kids" },
   { id: "care", image: "/images/service-hair-wash-massage.png", focus: "32% 40%", book: "spa" },
@@ -87,7 +87,9 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                 />
                 <div
                   className={`absolute inset-0 transition-colors duration-700 ${
-                    on ? "bg-gradient-to-t from-forest/95 via-forest/25 to-transparent" : "bg-forest/65 group-hover:bg-forest/50"
+                    on
+                      ? "bg-gradient-to-t from-forest/95 via-forest/25 to-transparent"
+                      : "bg-gradient-to-t from-forest/85 via-forest/25 to-forest/10 group-hover:via-transparent"
                   }`}
                 />
 
