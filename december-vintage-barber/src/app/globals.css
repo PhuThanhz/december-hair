@@ -149,6 +149,13 @@ body {
   box-shadow: 0 0 0 3px var(--color-paper);
   transition: transform 0.5s var(--ease-out-quint), background-color 0.5s;
 }
+.dh-marker-dot img {
+  position: absolute;
+  inset: 24%;
+  width: 52%;
+  height: 52%;
+  object-fit: contain;
+}
 .dh-marker-pulse {
   position: absolute;
   inset: 0;

@@ -194,11 +194,13 @@ function setAerial(map: MLMap, on: boolean) {
   }
 }
 
-function markerEl(index: number) {
+/** The brand's "D" in a green disc; the salon name is its accessible label. */
+function markerEl(label: string) {
   const el = document.createElement("button");
   el.type = "button";
   el.className = "dh-marker";
-  el.innerHTML = `<span class="dh-marker-pulse"></span><span class="dh-marker-dot">0${index + 1}</span>`;
+  el.setAttribute("aria-label", label);
+  el.innerHTML = `<span class="dh-marker-pulse"></span><span class="dh-marker-dot"><img src="/images/logo-d-white.png" alt="" /></span>`;
   return el;
 }
 
@@ -293,8 +295,8 @@ export default function BranchMap({
       if (box.current) io.observe(box.current);
       m.once("remove", () => io.disconnect());
 
-      BRANCHES.forEach((b, i) => {
-        const el = markerEl(i);
+      BRANCHES.forEach((b) => {
+        const el = markerEl(b.mall);
         el.addEventListener("click", () => select.current(b.id));
         markers.current[b.id] = new maplibregl.Marker({ element: el }).setLngLat(b.coords).addTo(m);
       });
