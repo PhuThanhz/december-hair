@@ -234,6 +234,7 @@ export const T = {
     aboutClips: { cut: "Střih", colour: "Barva", care: "Péče" } as Record<string, string>,
     aboutNote: "Každý den od rána do večera — bez spěchu a s citem pro detail.",
     aboutTitle: ["Tři salony,", "jeden tým."],
+    aboutVerbs: ["Stříháme", "barvíme", "pečujeme"],
     aboutText: "Stříháme, barvíme a pečujeme bez spěchu a s citem pro detail. Ať přijdete do kteréhokoli salonu, čeká vás stejná péče.",
     aboutFacts: [
       { n: "3", l: "salony v Praze, Kladně a Mladé Boleslavi" },
@@ -370,6 +371,7 @@ export const T = {
     aboutClips: { cut: "Cut", colour: "Colour", care: "Care" } as Record<string, string>,
     aboutNote: "Every day, morning to evening — unhurried, with an eye for detail.",
     aboutTitle: ["Three salons,", "one team."],
+    aboutVerbs: ["We cut", "colour", "care"],
     aboutText: "We cut, colour and care, unhurried and with an eye for detail. Whichever salon you walk into, the same care is waiting.",
     aboutFacts: [
       { n: "3", l: "salons in Prague, Kladno and Mladá Boleslav" },
