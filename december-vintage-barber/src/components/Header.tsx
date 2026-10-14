@@ -69,7 +69,6 @@ export default function Header({
   ];
   const hint = (href: string) => (t.menuHint[href.slice(1)] ?? "").replace("{price}", String(fromPrice));
 
-  const chips = useRef<HTMLUListElement | null>(null);
   // The section on screen right now, lit in the bar
   const [current, setCurrent] = useState<string | null>(null);
 
@@ -154,14 +153,6 @@ export default function Header({
     // 12px each side: the link's own padding, so the line runs under the word only
     if (link?.offsetParent) setMarker({ x: link.offsetLeft + 12, w: link.offsetWidth - 24 });
   }, [current, lang]);
-
-  // Keep the lit chip in view in the sideways row on phones
-  useEffect(() => {
-    const row = chips.current;
-    const chip = current ? row?.querySelector<HTMLElement>(`[data-chip="${current}"]`) : null;
-    if (!row || !chip || !row.offsetParent) return;
-    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: "smooth" });
-  }, [current]);
 
   // Full-screen menu: a quick curtain, then the links rise; usable in about half a second
   useGSAP(
@@ -269,14 +260,14 @@ export default function Header({
             </ul>
           </nav>
 
-          <div data-header-after className="flex shrink-0 items-center gap-4 sm:gap-6 text-sm">
+          <div data-header-after className="flex shrink-0 items-center gap-2.5 sm:gap-6 text-sm">
             <div className="hidden sm:block lg:hidden xl:block">
               <LangSwitch lang={lang} setLang={setLang} />
             </div>
             <Magnetic>
               <button
                 onClick={onBook}
-                className="hidden sm:block cursor-pointer whitespace-nowrap rounded-full bg-forest text-paper px-5 py-2.5 text-sm hover:bg-moss transition-colors duration-500"
+                className="cursor-pointer whitespace-nowrap rounded-full bg-forest text-paper px-3.5 py-1.5 text-xs sm:px-5 sm:py-2.5 sm:text-sm font-medium hover:bg-moss transition-colors duration-500"
               >
                 {t.book}
               </button>
@@ -287,53 +278,16 @@ export default function Header({
                 setOpen(true);
               }}
               aria-expanded={open}
-              className="group cursor-pointer flex items-center gap-3 rounded-full border border-ink/20 pl-4 pr-3 py-2 hover:border-ink transition-colors"
+              className="group cursor-pointer flex items-center gap-2 sm:gap-3 rounded-full border border-ink/20 px-3 py-1.5 sm:pl-4 sm:pr-3 sm:py-2 text-xs sm:text-sm hover:border-ink transition-colors"
             >
               <span>{t.menu}</span>
-              <span className="flex flex-col gap-[5px]">
-                <span className="block h-px w-5 bg-ink transition-transform duration-500 group-hover:translate-x-1" />
-                <span className="block h-px w-5 bg-ink transition-transform duration-500 group-hover:-translate-x-1" />
+              <span className="flex flex-col gap-[4px] sm:gap-[5px]">
+                <span className="block h-px w-4 sm:w-5 bg-ink transition-transform duration-500 group-hover:translate-x-1" />
+                <span className="block h-px w-4 sm:w-5 bg-ink transition-transform duration-500 group-hover:-translate-x-1" />
               </span>
             </button>
           </div>
         </div>
-
-        {/* Phones and tablets: the sections as a sideways row of chips under the bar */}
-        <nav data-header-after aria-label={t.menu} className="lg:hidden">
-          <ul
-            ref={chips}
-            className="flex gap-2 overflow-x-auto px-5 sm:px-8 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {/* Phones have no booking button in the bar, so it leads the row (the bar has one from sm up) */}
-            <li className="shrink-0 sm:hidden">
-              <button
-                onClick={onBook}
-                className="block cursor-pointer whitespace-nowrap rounded-full border border-moss bg-moss px-3.5 py-1.5 text-[13px] leading-5 text-paper active:bg-forest"
-              >
-                {t.book} →
-              </button>
-            </li>
-            {links.map((l) => {
-              const id = l.href.slice(1);
-              const on = current === id;
-              return (
-                <li key={l.href} className="shrink-0">
-                  <a
-                    href={l.href}
-                    data-chip={id}
-                    onClick={(e) => jump(e, l.href)}
-                    aria-current={on ? "location" : undefined}
-                    className={`block whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] leading-5 transition-colors duration-500 ${
-                      on ? "bg-forest border-forest text-paper" : "bg-paper/70 border-ink/15 text-ink-soft active:bg-bone"
-                    }`}
-                  >
-                    {l.label}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </header>
 
       {/* Full-screen navigation */}
