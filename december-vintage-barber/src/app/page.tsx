@@ -52,7 +52,7 @@ export default function DecemberPage() {
       <Header t={t} lang={lang} setLang={setLang} onBook={() => book()} />
       <main>
         <Hero t={t} ready={ready} />
-        <About t={t} />
+        <About t={t} onBook={(c, note) => book({ category: c, note })} />
         <Services t={t} onBook={(c) => book({ category: c })} />
         <PriceList t={t} lang={lang} onBook={(c, items) => book({ category: c, note: items })} />
         <Reels t={t} lang={lang} onBook={(b) => book({ branch: b })} />

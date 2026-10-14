@@ -33,12 +33,16 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
 
         const render = () => {
           const vw = window.innerWidth / 100;
+          const n = cards.length;
           cards.forEach((card, i) => {
-            const d = i - state.p;
+            // The line-up is a loop: there is always a clip on both sides of the one in front
+            const d = gsap.utils.wrap(-n / 2, n / 2, i - state.p);
             const a = Math.min(Math.abs(d), 3);
             card.style.transform = `translate3d(-50%, -50%, 0) translate3d(${d * 23 * vw}px, 0, 0) rotateY(${gsap.utils.clamp(-38, 38, -d * 24)}deg) scale(${1 - a * 0.2})`;
             card.style.zIndex = String(100 - Math.round(a * 10));
-            card.style.opacity = String(gsap.utils.clamp(0, 1, 1.2 - a * 0.32));
+            // Fully faded by the time a clip wraps to the other edge, so the jump is never seen
+            const edge = gsap.utils.clamp(0, 1, (n / 2 - Math.abs(d)) * 2);
+            card.style.opacity = String(gsap.utils.clamp(0, 1, 1.2 - a * 0.32) * edge);
             shades[i].style.opacity = String(Math.min(1, a) * 0.38);
           });
           const idx = Math.round(state.p);

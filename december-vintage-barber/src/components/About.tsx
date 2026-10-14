@@ -1,13 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BRANCHES, type Dict } from "@/app/data";
+import { BRANCHES, SERVICES, type Category, type Dict } from "@/app/data";
 import { gsap, useGSAP, ScrollTrigger, EASE, MQ_MOTION } from "@/lib/gsap";
 import { scrollToSection } from "@/lib/scroll";
 import { playWhileVisible } from "@/lib/video";
 
 const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
+
+// Which services each clip stands for (Service.cs), and where booking it starts
+const CLIP_SERVICES: Record<Clip, { services: string[]; category?: Category }> = {
+  cut: { services: ["Dětský střih", "Pánský střih", "Fade a úprava vousů", "Střih a foukaná"] },
+  colour: { services: ["Barvení a melír", "Balayage"], category: "women" },
+  care: { services: ["Mytí a masáž hlavy", "Head spa"], category: "spa" },
+};
+
+const num = (s: string) => Number(s.replace(/\D/g, ""));
+
+// "od 390 Kč · 30–60 min" for each clip, straight from the price list
+const CLIP_FACTS = Object.fromEntries(
+  CLIPS.map((c) => {
+    const list = SERVICES.filter((s) => CLIP_SERVICES[c].services.includes(s.cs));
+    const cheapest = list.reduce((a, b) => (num(b.price) < num(a.price) ? b : a));
+    const mins = list.map((s) => num(s.duration));
+    const lo = Math.min(...mins);
+    const hi = Math.max(...mins);
+    return [c, { from: cheapest.price, time: lo === hi ? `${lo} min` : `${lo}–${hi} min` }];
+  })
+) as Record<Clip, { from: string; time: string }>;
 
 // Latest closing time across the salons, e.g. "09:00 – 20:00" → 20:00
 const CLOSE = BRANCHES.map((b) => b.hours.split(/\s*[–-]\s*/)[1]).sort().reverse()[0];
@@ -27,9 +48,31 @@ const pragueDay = () =>
  * "screen"-blended over the clip (black letters let it through, white stays white), then a
  * paper-coloured layer is "multiply"-blended so the white matches the page.
  */
-export default function About({ t }: { t: Dict }) {
+export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, note?: string) => void }) {
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<Clip>("cut");
+
+  // The running clip's progress, drawn under the word and under the mirror at once
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const frame = el.querySelector<HTMLVideoElement>(`[data-frame="${active}"]`);
+    const inText = el.querySelector<HTMLVideoElement>(`[data-intext="${active}"]`);
+    const bars = el.querySelectorAll<HTMLElement>("[data-progress]");
+    // Phones hide the mirror, so the word's own clip is the clock there
+    const mirrorShown = !!frame?.offsetParent;
+    const video = mirrorShown ? frame : inText;
+    // The word and the mirror show the same moment of the clip
+    if (mirrorShown && frame && inText) inText.currentTime = frame.currentTime;
+    let raf = 0;
+    const loop = () => {
+      const p = video && video.duration ? video.currentTime / video.duration : 0;
+      bars.forEach((b) => (b.style.transform = `scaleX(${b.dataset.progress === active ? p : 0})`));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [active]);
   // Clock-dependent, so only known on the client
   const [today, setToday] = useState<number | null>(null);
 
@@ -51,8 +94,9 @@ export default function About({ t }: { t: Dict }) {
       gsap.utils.toArray<HTMLElement>("[data-verb]").forEach((el) => {
         ScrollTrigger.create({
           trigger: el,
-          start: "top 60%",
-          end: "bottom 40%",
+          // Exactly one word holds the middle line at a time, so clips never fight over it
+          start: "top center",
+          end: "bottom center",
           onToggle: (st) => st.isActive && setActive(el.dataset.verb as Clip),
         });
       });
@@ -95,6 +139,25 @@ export default function About({ t }: { t: Dict }) {
     { scope: root }
   );
 
+  // What it is, what it costs, book it: under the mirror on desktop, under the words on phones
+  const plate = (
+    <div className="flex items-end justify-between gap-4">
+      <div className="min-w-0">
+        <p className="label text-ink-soft tabular-nums">0{CLIPS.indexOf(active) + 1} / 03</p>
+        <p className="mt-1 font-serif italic text-3xl leading-none text-forest">{t.aboutClips[active]}</p>
+        <p className="mt-2 text-sm text-ink-soft whitespace-nowrap">
+          {t.servicesFrom} <span className="price text-ink">{CLIP_FACTS[active].from} Kč</span> · {CLIP_FACTS[active].time}
+        </p>
+      </div>
+      <button
+        onClick={() => onBook(CLIP_SERVICES[active].category, t.aboutClips[active])}
+        className="shrink-0 cursor-pointer rounded-full bg-forest text-paper px-5 py-2.5 text-sm hover:bg-moss transition-colors duration-500"
+      >
+        {t.book} →
+      </button>
+    </div>
+  );
+
   const goBranches = (e: React.MouseEvent) => {
     e.preventDefault();
     scrollToSection("#pobocky");
@@ -119,29 +182,32 @@ export default function About({ t }: { t: Dict }) {
         </div>
 
         <div className="mt-14 sm:mt-20 grid grid-cols-12 lg:gap-x-8 gap-y-8">
-          {/* The clip, sharp and in full, beside the words it lives in */}
-          <div className="col-span-12 lg:col-span-4 lg:col-start-9 lg:row-start-1">
+          {/* The clip, sharp and in full, in an arched mirror like the ones in the salons */}
+          <div className="hidden lg:block col-span-12 lg:col-span-4 lg:col-start-9 lg:row-start-1">
             <div className="lg:sticky lg:top-24">
-              <div className="relative aspect-[16/11] lg:aspect-[4/5] overflow-hidden rounded-[2px] bg-bone">
-                {CLIPS.map((c) => (
-                  <video
-                    key={c}
-                    src={`/videos/about-${c}.mp4`}
-                    poster={`/videos/about-${c}.jpg`}
-                    data-hold={c !== active || undefined}
-                    muted
-                    loop
-                    playsInline
-                    preload="none"
-                    aria-label={t.aboutClips[c]}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${c === active ? "opacity-100" : "opacity-0"}`}
-                  />
-                ))}
+              <div className="rounded-t-full border border-forest/30 p-2 sm:p-2.5">
+                <div className="relative aspect-[4/5] lg:aspect-[3/4] overflow-hidden rounded-t-full bg-bone">
+                  {CLIPS.map((c) => (
+                    <video
+                      key={c}
+                      data-frame={c}
+                      src={`/videos/about-${c}.mp4`}
+                      poster={`/videos/about-${c}.jpg`}
+                      data-hold={c !== active || undefined}
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      aria-label={t.aboutClips[c]}
+                      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-out ${c === active ? "opacity-100" : "opacity-0"}`}
+                    />
+                  ))}
+                  <span className="absolute inset-x-0 bottom-0 h-[3px] bg-paper/30" />
+                  <span data-progress={active} className="absolute inset-x-0 bottom-0 h-[3px] origin-left scale-x-0 bg-paper" />
+                </div>
               </div>
-              <p className="mt-3 flex justify-between text-sm text-ink-soft">
-                <span className="text-ink">{t.aboutClips[active]}</span>
-                <span className="tabular-nums">{CLIPS.indexOf(active) + 1} / 3</span>
-              </p>
+
+              <div className="mt-5">{plate}</div>
             </div>
           </div>
 
@@ -154,21 +220,22 @@ export default function About({ t }: { t: Dict }) {
                   key={c}
                   data-verb={c}
                   onClick={() => setActive(c)}
-                  onMouseEnter={() => setActive(c)}
                   aria-pressed={on}
                   aria-label={t.aboutClips[c]}
                   className="relative isolate block w-full cursor-pointer overflow-hidden border-b border-ink/15 text-left"
                 >
                   <video
+                    data-intext={c}
                     src={`/videos/about-${c}.mp4`}
                     poster={`/videos/about-${c}.jpg`}
                     data-hold={!on || undefined}
                     muted
                     loop
                     playsInline
-                    preload="none"
+                    preload="metadata"
                     aria-hidden
-                    className={`absolute inset-0 w-full h-full object-cover [filter:contrast(1.25)_saturate(1.3)_brightness(0.82)] transition-opacity duration-500 ${
+                    // Inset 1px so the clip's anti-aliased edge stays under the white sheet (no grey frame line)
+                    className={`absolute inset-px w-[calc(100%-2px)] h-[calc(100%-2px)] object-cover [filter:contrast(1.25)_saturate(1.3)_brightness(0.82)] transition-opacity duration-1000 ease-out ${
                       on ? "opacity-100" : "opacity-0"
                     }`}
                   />
@@ -182,9 +249,21 @@ export default function About({ t }: { t: Dict }) {
                     {t.aboutVerbs[i]}
                   </span>
                   <span aria-hidden className={`absolute inset-0 bg-paper mix-blend-multiply pointer-events-none ${on ? "" : "hidden"}`} />
+                  {/* Index on the right; the clip's progress runs along the rule beneath the word */}
+                  <span
+                    aria-hidden
+                    className={`absolute right-0 top-1/2 -translate-y-1/2 font-serif italic text-2xl tabular-nums transition-colors duration-700 ${
+                      on ? "text-forest" : "text-forest/20"
+                    }`}
+                  >
+                    0{i + 1}
+                  </span>
+                  <span aria-hidden data-progress={c} className="absolute inset-x-0 -bottom-px h-[2px] origin-left scale-x-0 bg-forest" />
                 </button>
               );
             })}
+            {/* Phones: no mirror, the word carries the clip; the plate sits right under the words */}
+            <div className="lg:hidden mt-6">{plate}</div>
           </div>
         </div>
 
