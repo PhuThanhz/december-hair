@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { Source_Serif_4, Schibsted_Grotesk } from "next/font/google";
+import { Noto_Serif_Display, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
-// Sturdy, low-contrast serif: Czech accents (ř, č, ě, ů) stay clear at every size; opsz tunes it per size
-const serif = Source_Serif_4({
+// Sharp, high-contrast display serif with a restrained italic; full Czech accents (ř, č, ě, ů)
+const serif = Noto_Serif_Display({
   variable: "--font-serif-face",
-  axes: ["opsz"],
   subsets: ["latin", "latin-ext"],
   style: ["normal", "italic"],
   display: "swap",

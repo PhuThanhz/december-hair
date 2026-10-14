@@ -240,7 +240,7 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                     }`}
                   />
                   <span
-                    className={`relative block font-serif font-black italic leading-none tracking-[-0.035em] text-[19vw] sm:text-[16vw] lg:text-[10.5vw] pt-[0.1em] pb-[0.26em] pl-[0.02em] ${
+                    className={`relative block font-serif font-black italic leading-none tracking-[-0.035em] text-[15vw] sm:text-[16vw] lg:text-[10.5vw] pt-[0.1em] pb-[0.26em] pl-[0.02em] ${
                       // Room above for č/í and below for j/p; inactive words are a soft solid tint (an outline
                       // stroke shows the variable font's overlapping contours as stray lines)
                       on ? "bg-white text-black mix-blend-screen" : "bg-paper text-forest/12 hover:text-forest/25"
