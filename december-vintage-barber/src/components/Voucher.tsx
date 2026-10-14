@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Image from "next/image";
 import type { Dict } from "@/app/data";
-import { gsap, useGSAP, EASE, MQ_MOTION, MQ_POINTER } from "@/lib/gsap";
+import { gsap, useGSAP, ScrollTrigger, EASE, MQ_MOTION, MQ_POINTER } from "@/lib/gsap";
 import Magnetic from "./Magnetic";
 
 export default function Voucher({ t, onBook }: { t: Dict; onBook: () => void }) {
@@ -38,8 +38,14 @@ export default function Voucher({ t, onBook }: { t: Dict; onBook: () => void }) 
           stagger: 0.1,
           scrollTrigger: { trigger: root.current, start: "top 55%" },
         });
-        // Gentle idle float
-        gsap.to("[data-v-float]", { y: -14, duration: 3, ease: "sine.inOut", yoyo: true, repeat: -1 });
+        // Gentle idle float, ticking only while the card is on screen
+        const float = gsap.to("[data-v-float]", { y: -14, duration: 3, ease: "sine.inOut", yoyo: true, repeat: -1, paused: true });
+        ScrollTrigger.create({
+          trigger: root.current,
+          start: "top bottom",
+          end: "bottom top",
+          onToggle: (st) => (st.isActive ? float.play() : float.pause()),
+        });
       });
 
       // Tilt + moving light under the pointer

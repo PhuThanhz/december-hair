@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { BRANCHES, directionsUrl, type Dict } from "@/app/data";
 import { gsap, useGSAP, EASE, MQ_MOTION, ScrollTrigger } from "@/lib/gsap";
+import { useInView } from "@/lib/useInView";
 
 import FastMarquee from "react-fast-marquee";
 
@@ -12,8 +13,11 @@ const loadMap = () => import("./BranchMap");
 const BranchMap = dynamic(loadMap, { ssr: false });
 
 function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void }) {
+  const box = useRef<HTMLDivElement | null>(null);
+  const inView = useInView(box);
   return (
     <div
+      ref={box}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -25,6 +29,7 @@ function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void })
       <FastMarquee
         direction="left"
         speed={22}
+        play={inView}
         pauseOnHover={true}
         autoFill={true}
         className="overflow-hidden"
@@ -131,7 +136,7 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
             <p className="text-ink-soft max-w-xs pb-4">{t.branchesNote}</p>
           </div>
 
-          <div className="grid grid-cols-12 gap-x-8 gap-y-10">
+          <div className="grid grid-cols-12 lg:gap-x-8 gap-y-10">
             {/* Map */}
             <div className="col-span-12 lg:col-span-7 lg:order-2">
               <div

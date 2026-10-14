@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BRANCHES, type Dict } from "@/app/data";
-import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_MOTION } from "@/lib/gsap";
+import { gsap, useGSAP, ScrollTrigger, EASE, MQ_MOTION } from "@/lib/gsap";
+import { scrollToSection } from "@/lib/scroll";
 import { playWhileVisible } from "@/lib/video";
 
 const CLIPS = ["cut", "colour", "care"] as const;
@@ -96,15 +97,13 @@ export default function About({ t }: { t: Dict }) {
 
   const goBranches = (e: React.MouseEvent) => {
     e.preventDefault();
-    const lenis = getLenis();
-    if (lenis) lenis.scrollTo("#pobocky", { duration: 1.1 });
-    else document.querySelector("#pobocky")?.scrollIntoView({ behavior: "smooth" });
+    scrollToSection("#pobocky");
   };
 
   return (
     <section ref={root} className="relative bg-paper px-5 sm:px-8 lg:px-12 py-24 sm:py-32">
       <div className="mx-auto max-w-[1600px]">
-        <div className="grid grid-cols-12 gap-x-8 gap-y-6 items-end">
+        <div className="grid grid-cols-12 lg:gap-x-8 gap-y-6 items-end">
           <h2 className="col-span-12 lg:col-span-7 font-serif text-5xl sm:text-6xl lg:text-7xl leading-[0.98] tracking-[-0.03em]">
             {t.aboutTitle.map((line, i) => (
               <span key={i} className="line-mask">
@@ -119,7 +118,7 @@ export default function About({ t }: { t: Dict }) {
           </p>
         </div>
 
-        <div className="mt-14 sm:mt-20 grid grid-cols-12 gap-x-8 gap-y-8">
+        <div className="mt-14 sm:mt-20 grid grid-cols-12 lg:gap-x-8 gap-y-8">
           {/* The clip, sharp and in full, beside the words it lives in */}
           <div className="col-span-12 lg:col-span-4 lg:col-start-9 lg:row-start-1">
             <div className="lg:sticky lg:top-24">

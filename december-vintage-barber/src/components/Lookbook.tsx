@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Marquee from "react-fast-marquee";
 import { type Category, type Dict, type Lang } from "@/app/data";
+import { useInView } from "@/lib/useInView";
 
 export interface PortfolioItem {
   id: number;
@@ -218,6 +219,9 @@ export default function Lookbook({
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [spotlightItem, setSpotlightItem] = useState<PortfolioItem | null>(null);
+  // The two endless rows only run while the section is on screen
+  const rows = useRef<HTMLDivElement | null>(null);
+  const rowsInView = useInView(rows);
 
   // Filtered items based on active tab
   const filteredItems = useMemo(() => {
@@ -304,7 +308,7 @@ export default function Lookbook({
   );
 
   return (
-    <section id="salon" className="relative bg-paper py-16 sm:py-24 overflow-hidden border-t border-forest/10">
+    <section id="salon" className="relative bg-paper py-20 sm:py-24 overflow-hidden border-t border-forest/10">
       {/* Editorial Luxury Header (clean, uncluttered, magazine-style) */}
       <div className="mx-auto max-w-4xl px-5 text-center">
         <h2 className="font-serif text-5xl sm:text-6xl lg:text-[4.5rem] text-forest tracking-[-0.03em] leading-[0.95]">
@@ -342,7 +346,7 @@ export default function Lookbook({
       </div>
 
       {/* 2 Infinite Running Rows of Big Pure Photos (2 tầng thoáng đãng, tinh tế, không rối mắt) */}
-      <div className="mt-10 sm:mt-12 relative w-full overflow-hidden space-y-4 sm:space-y-5">
+      <div ref={rows} className="mt-10 sm:mt-12 relative w-full overflow-hidden space-y-4 sm:space-y-5">
         {/* Left & Right gradient vignette fades */}
         <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-44 bg-gradient-to-r from-paper via-paper/90 to-transparent z-20" />
         <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-44 bg-gradient-to-l from-paper via-paper/90 to-transparent z-20" />
@@ -351,6 +355,7 @@ export default function Lookbook({
         <Marquee
           direction="left"
           speed={32}
+          play={rowsInView}
           pauseOnHover={true}
           autoFill={true}
           className="overflow-hidden py-1"
@@ -362,6 +367,7 @@ export default function Lookbook({
         <Marquee
           direction="right"
           speed={35}
+          play={rowsInView}
           pauseOnHover={true}
           autoFill={true}
           className="overflow-hidden py-1"

@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { BRANCHES, SERVICES, SOCIAL, type Dict, type Lang } from "@/app/data";
 import { gsap, useGSAP, getLenis } from "@/lib/gsap";
+import { isNavigating, scrollToSection } from "@/lib/scroll";
 import Magnetic from "./Magnetic";
+
+// The sections reachable from the bar, top to bottom
+const SECTIONS = ["sluzby", "cenik", "salon", "poukazy", "pobocky"] as const;
 
 const fromPrice = Math.min(...SERVICES.map((s) => Number(s.price.replace(/\s/g, ""))));
 
@@ -65,22 +69,65 @@ export default function Header({
   ];
   const hint = (href: string) => (t.menuHint[href.slice(1)] ?? "").replace("{price}", String(fromPrice));
 
-  // Hide the bar while scrolling down, bring it back on the way up
+  const chips = useRef<HTMLUListElement | null>(null);
+  // The section on screen right now, lit in the bar
+  const [current, setCurrent] = useState<string | null>(null);
+
+  // Hide the bar while scrolling down, bring it back on the way up. Read once per frame and only
+  // start a tween when the state flips (scroll events fire far more often than frames).
   useEffect(() => {
     let last = window.scrollY;
-    const onScroll = () => {
+    let hidden = false;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
       const y = window.scrollY;
-      // Stay transparent over the hero (its clips run edge to edge); go solid once past it
-      const hero = document.getElementById("top");
-      setSolid(hero ? hero.getBoundingClientRect().bottom <= 64 : y > 40);
-      if (!bar.current) return;
-      const hide = y > last && y > 200;
-      gsap.to(bar.current, { yPercent: hide ? -100 : 0, duration: 0.6, ease: "power3.out", overwrite: true });
+      setSolid(y > 40);
+      // Ignore trackpad jitter of a few pixels
+      if (Math.abs(y - last) < 6 && y > 200) return;
+      // A jump picked from the bar keeps the bar in view, so the next section is one tap away
+      const hide = y > last && y > 200 && !isNavigating();
       last = y;
+      if (hide === hidden || !bar.current) return;
+      hidden = hide;
+      gsap.to(bar.current, { yPercent: hide ? -100 : 0, duration: 0.6, ease: "power3.out", overwrite: true });
     };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
   }, []);
+
+  // Scroll-spy: whichever section crosses the middle of the screen
+  useEffect(() => {
+    const seen = new Map<string, boolean>();
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => seen.set(e.target.id, e.isIntersecting));
+        // Lowest section still crossing the middle (two can overlap the band at a boundary)
+        setCurrent(SECTIONS.filter((id) => seen.get(id)).pop() ?? null);
+      },
+      { rootMargin: "-45% 0px -50% 0px" }
+    );
+    SECTIONS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, []);
+
+  // Keep the lit chip in view in the sideways row on phones
+  useEffect(() => {
+    const row = chips.current;
+    const chip = current ? row?.querySelector<HTMLElement>(`[data-chip="${current}"]`) : null;
+    if (!row || !chip || !row.offsetParent) return;
+    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: "smooth" });
+  }, [current]);
 
   // Full-screen menu: a quick curtain, then the links rise; usable in about half a second
   useGSAP(
@@ -117,26 +164,34 @@ export default function Header({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Straight from the bar: glide there and leave the address pointing at the section, so it can be shared
+  const goTo = (href: string) => {
+    window.history.replaceState(null, "", href === "#top" ? window.location.pathname + window.location.search : href);
+    scrollToSection(href);
+  };
+  const jump = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    goTo(href);
+  };
+
+  // From the full-screen menu: let the curtain start lifting first
   const go = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
     setOpen(false);
-    const lenis = getLenis();
-    window.setTimeout(() => {
-      if (lenis) lenis.scrollTo(href, { duration: 1.1 });
-      else document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
-    }, 120);
+    window.setTimeout(() => goTo(href), 120);
   };
 
   return (
     <>
       <header
         ref={bar}
+        data-site-header
         className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-500 border-b ${
           solid ? "bg-paper border-ink/10" : "bg-transparent border-transparent"
         }`}
       >
-        <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12 h-16 flex items-center justify-between">
-          <a href="#top" onClick={(e) => go(e, "#top")} data-header-brand className="flex items-end" aria-label="December Hair">
+        <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-6">
+          <a href="#top" onClick={(e) => jump(e, "#top")} data-header-brand className="flex shrink-0 items-end" aria-label="December Hair">
             <Image
               src="/images/logo-wordmark-ink.png"
               alt="December"
@@ -150,14 +205,43 @@ export default function Header({
             </span>
           </a>
 
-          <div data-header-after className="flex items-center gap-4 sm:gap-6 text-sm">
-            <div className="hidden sm:block">
+          {/* Desktop: every section one click away, no menu to open */}
+          <nav data-header-after aria-label={t.menu} className="hidden lg:block">
+            <ul className="flex items-center xl:gap-2">
+              {links.map((l) => {
+                const on = current === l.href.slice(1);
+                return (
+                  <li key={l.href}>
+                    <a
+                      href={l.href}
+                      onClick={(e) => jump(e, l.href)}
+                      aria-current={on ? "location" : undefined}
+                      className={`relative block whitespace-nowrap px-3 py-2 text-sm transition-colors duration-300 ${
+                        on ? "text-ink" : "text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {l.label}
+                      <span
+                        aria-hidden
+                        className={`absolute inset-x-3 bottom-1 h-px origin-left bg-ink transition-transform duration-500 ease-[var(--ease-out-quint)] ${
+                          on ? "scale-x-100" : "scale-x-0"
+                        }`}
+                      />
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div data-header-after className="flex shrink-0 items-center gap-4 sm:gap-6 text-sm">
+            <div className="hidden sm:block lg:hidden xl:block">
               <LangSwitch lang={lang} setLang={setLang} />
             </div>
             <Magnetic>
               <button
                 onClick={onBook}
-                className="hidden sm:block cursor-pointer rounded-full bg-forest text-paper px-5 py-2.5 text-sm hover:bg-moss transition-colors duration-500"
+                className="hidden sm:block cursor-pointer whitespace-nowrap rounded-full bg-forest text-paper px-5 py-2.5 text-sm hover:bg-moss transition-colors duration-500"
               >
                 {t.book}
               </button>
@@ -178,6 +262,43 @@ export default function Header({
             </button>
           </div>
         </div>
+
+        {/* Phones and tablets: the sections as a sideways row of chips under the bar */}
+        <nav data-header-after aria-label={t.menu} className="lg:hidden">
+          <ul
+            ref={chips}
+            className="flex gap-2 overflow-x-auto px-5 sm:px-8 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {/* Phones have no booking button in the bar, so it leads the row (the bar has one from sm up) */}
+            <li className="shrink-0 sm:hidden">
+              <button
+                onClick={onBook}
+                className="block cursor-pointer whitespace-nowrap rounded-full border border-moss bg-moss px-3.5 py-1.5 text-[13px] leading-5 text-paper active:bg-forest"
+              >
+                {t.book} →
+              </button>
+            </li>
+            {links.map((l) => {
+              const id = l.href.slice(1);
+              const on = current === id;
+              return (
+                <li key={l.href} className="shrink-0">
+                  <a
+                    href={l.href}
+                    data-chip={id}
+                    onClick={(e) => jump(e, l.href)}
+                    aria-current={on ? "location" : undefined}
+                    className={`block whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] leading-5 transition-colors duration-300 ${
+                      on ? "bg-forest border-forest text-paper" : "bg-paper/70 border-ink/15 text-ink-soft active:bg-bone"
+                    }`}
+                  >
+                    {l.label}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </header>
 
       {/* Full-screen navigation */}
@@ -208,7 +329,7 @@ export default function Header({
             </button>
           </div>
 
-          <div className="flex-1 grid grid-cols-12 gap-x-8 gap-y-12 content-center py-10">
+          <div className="flex-1 grid grid-cols-12 lg:gap-x-8 gap-y-12 content-center py-10">
             {/* Where to go, each with the one fact that helps decide */}
             <nav className="col-span-12 lg:col-span-7">
               <ul>

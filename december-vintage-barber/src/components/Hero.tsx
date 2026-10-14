@@ -234,7 +234,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
       </div>
 
       {/* Mobile */}
-      <div className="md:hidden pt-24 px-5 pb-10">
+      <div className="md:hidden pt-32 px-5 pb-10">
         <div className="font-serif leading-[0.8] tracking-[-0.045em] text-[19.5vw] -ml-1">
           <Wordmark />
           <span data-hero-fade className="block text-right italic text-[7vw] leading-none tracking-normal mt-1 text-moss">

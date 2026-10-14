@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { gsap, useGSAP, getLenis, MQ_MOTION } from "@/lib/gsap";
+import { scrollToSection } from "@/lib/scroll";
 
 /** Flowing hair strands, the same curves that live inside the "D" of the logo. */
 function Strands() {
@@ -52,11 +53,24 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
         gsap.to(extras, { autoAlpha: 1, duration: 0.6 });
         setGone(true);
         getLenis()?.start();
+        try {
+          sessionStorage.setItem("dh-intro", "1");
+        } catch {}
         start();
       };
 
-      if (!window.matchMedia(MQ_MOTION).matches || !target) {
+      // A link straight to a section (…/#cenik) skips the intro and lands there
+      const section = window.location.hash.length > 1 ? document.getElementById(window.location.hash.slice(1)) : null;
+      // The intro plays once per visit; reloads and returns in the same tab go straight to the page
+      let seen = false;
+      try {
+        seen = sessionStorage.getItem("dh-intro") === "1";
+      } catch {}
+
+      if (!window.matchMedia(MQ_MOTION).matches || !target || seen || section) {
         finish();
+        // Wait for the pinned scenes and the fonts, so the section is measured where it really is
+        if (section) document.fonts.ready.then(() => window.setTimeout(() => scrollToSection(`#${section.id}`, { immediate: true }), 60));
         return;
       }
 
@@ -79,7 +93,27 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
         gsap.set(p, { strokeDasharray: len, strokeDashoffset: len });
       });
 
-      const tl = gsap.timeline({ onComplete: finish });
+      // Any scroll, tap or key cuts straight to the curtain opening. Until the page underneath is
+      // ready that input only speeds things up; it doesn't scroll the page behind the curtain.
+      let locked = true;
+      const inputs = ["wheel", "touchmove", "touchstart", "pointerdown", "keydown"] as const;
+      const scrollKeys = [" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"];
+      const skip = (e: Event) => {
+        if (tl.time() < tl.labels.open) tl.seek("open");
+        const scrolls = e.type === "wheel" || e.type === "touchmove" || (e instanceof KeyboardEvent && scrollKeys.includes(e.key));
+        if (locked && scrolls && e.cancelable) e.preventDefault();
+      };
+      const unlisten = () => inputs.forEach((e) => window.removeEventListener(e, skip));
+      inputs.forEach((e) => window.addEventListener(e, skip, { passive: false }));
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          unlisten();
+          finish();
+        },
+      });
+      // Brisk: the page is usable about two seconds in
+      tl.timeScale(1.4);
       tl.to("[data-strand]", { strokeDashoffset: 0, duration: 1.8, ease: "power2.inOut", stagger: 0.07 }, 0)
         .fromTo(
           "[data-brand-word]",
@@ -110,7 +144,12 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
         )
         .to("[data-logo-ink]", { opacity: 1, duration: 0.7, ease: "power2.out" }, "open+=0.4")
         .to("[data-hair-word]", { color: "#56604f", duration: 0.7, ease: "power2.out" }, "open+=0.4")
-        .add(start, "open+=0.45");
+        .add(() => {
+          locked = false;
+          start();
+        }, "open+=0.45");
+
+      return unlisten;
     },
     { scope: root }
   );
