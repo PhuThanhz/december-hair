@@ -346,34 +346,36 @@ export default function Lookbook({
       </div>
 
       {/* 2 Infinite Running Rows of Big Pure Photos (2 tầng thoáng đãng, tinh tế, không rối mắt) */}
-      <div ref={rows} className="mt-10 sm:mt-12 relative w-full overflow-hidden space-y-4 sm:space-y-5">
-        {/* Left & Right gradient vignette fades */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-44 bg-gradient-to-r from-paper via-paper/90 to-transparent z-20" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-44 bg-gradient-to-l from-paper via-paper/90 to-transparent z-20" />
+      <div ref={rows} className="mt-10 sm:mt-12 relative w-full overflow-hidden">
+        {/* Left & Right gradient vignette fades - soft edge fade, perfectly aligned with cards */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-28 lg:w-40 bg-gradient-to-r from-paper to-transparent z-20" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-28 lg:w-40 bg-gradient-to-l from-paper to-transparent z-20" />
 
-        {/* Row 1: Running Left */}
-        <Marquee
-          direction="left"
-          speed={32}
-          play={rowsInView}
-          pauseOnHover={true}
-          autoFill={true}
-          className="overflow-hidden py-1"
-        >
-          {row1.map((item, idx) => renderCard(item, "r1", idx))}
-        </Marquee>
+        <div className="flex flex-col gap-4 sm:gap-5">
+          {/* Row 1: Running Left */}
+          <Marquee
+            direction="left"
+            speed={32}
+            play={rowsInView}
+            pauseOnHover={true}
+            autoFill={true}
+            className="overflow-hidden py-1"
+          >
+            {row1.map((item, idx) => renderCard(item, "r1", idx))}
+          </Marquee>
 
-        {/* Row 2: Running Right */}
-        <Marquee
-          direction="right"
-          speed={35}
-          play={rowsInView}
-          pauseOnHover={true}
-          autoFill={true}
-          className="overflow-hidden py-1"
-        >
-          {row2.map((item, idx) => renderCard(item, "r2", idx))}
-        </Marquee>
+          {/* Row 2: Running Right */}
+          <Marquee
+            direction="right"
+            speed={35}
+            play={rowsInView}
+            pauseOnHover={true}
+            autoFill={true}
+            className="overflow-hidden py-1"
+          >
+            {row2.map((item, idx) => renderCard(item, "r2", idx))}
+          </Marquee>
+        </div>
       </div>
 
 
