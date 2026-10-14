@@ -133,6 +133,8 @@ export default function Header({
     const onJump = (e: Event) => {
       const { id, ms } = (e as CustomEvent<SectionJump>).detail;
       setCurrent(id);
+      // The bar goes solid as a jump starts, so it reads over the colour the page dips into
+      if (ms) setSolid(true);
       lockedUntil = performance.now() + ms + 100;
       apply(ms + 150);
     };
