@@ -233,19 +233,52 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         </div>
       </div>
 
-      {/* Mobile */}
-      <div className="md:hidden pt-32 px-5 pb-10">
-        <div className="font-serif leading-[0.8] tracking-[-0.045em] text-[19.5vw] -ml-1">
-          <Wordmark />
-          <span data-hero-fade className="block text-right italic text-[7vw] leading-none tracking-normal mt-1 text-moss">
-            Hair
-          </span>
+      {/* Mobile: Full-bleed Cinematic Editorial Cover */}
+      <div className="md:hidden pt-20 px-3.5 pb-6">
+        <div
+          data-entry-frame
+          className="relative min-h-[82svh] rounded-[28px] overflow-hidden bg-forest text-paper shadow-2xl border border-forest/20 flex flex-col justify-between p-6"
+        >
+          {/* Background Video with multi-stop luxury dark gradient */}
+          <div className="absolute inset-0 z-0">
+            <Media p={PANELS[1]} sizes="100vw" />
+            <div className="absolute inset-0 bg-gradient-to-b from-forest/80 via-forest/25 to-forest/90 pointer-events-none" />
+            <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+          </div>
+
+          {/* Top meta tags */}
+          <div data-hero-fade className="relative z-10 flex items-center justify-between text-xs">
+            <span className="label tracking-[0.2em] text-[10px] text-sage border border-sage/35 rounded-full px-3 py-1 bg-forest/60 backdrop-blur-md">
+              Salon & Barber
+            </span>
+            <span className="label tracking-wider text-[10px] text-paper/80 font-mono">
+              Praha · Kladno
+            </span>
+          </div>
+
+          {/* Center brand mark */}
+          <div className="relative z-10 my-auto text-center py-6">
+            <div className="font-serif leading-[0.8] tracking-[-0.045em] text-[20vw] text-paper flex justify-center drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+              <Wordmark />
+            </div>
+            <span data-hero-fade className="block italic text-[8.5vw] leading-none tracking-normal mt-2 text-sage drop-shadow-md">
+              Hair
+            </span>
+          </div>
+
+          {/* Bottom Slogan & Explore hint */}
+          <div className="relative z-10 space-y-4">
+            <p data-hero-fade className="font-serif italic text-2xl leading-[1.1] text-paper max-w-[18ch] drop-shadow-md">
+              {t.heroLine}
+            </p>
+            <div data-hero-fade className="flex items-center justify-between pt-3 border-t border-paper/20 text-paper/80">
+              <span className="label text-[10px] text-paper/75 tracking-wider">{t.heroCities}</span>
+              <span className="label text-[10px] text-sage flex items-center gap-1.5 font-mono animate-pulse">
+                Scroll ↓
+              </span>
+            </div>
+          </div>
         </div>
-        <div data-entry-frame className="relative mt-8 aspect-[4/5] overflow-hidden bg-forest">
-          <Media p={PANELS[1]} sizes="100vw" />
-        </div>
-        <p data-hero-fade className="mt-6 font-serif italic text-3xl leading-[1.05]">{t.heroLine}</p>
-        <p data-hero-fade className="label text-ink-soft mt-4">{t.heroCities}</p>
       </div>
     </section>
   );
