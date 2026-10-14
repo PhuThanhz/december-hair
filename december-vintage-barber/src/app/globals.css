@@ -83,8 +83,9 @@ body {
   overflow: hidden;
   padding-top: 0.18em;
   margin-top: -0.18em;
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
+  /* Room for descenders (y, j, p) under the tight-leaded display titles */
+  padding-bottom: 0.3em;
+  margin-bottom: -0.3em;
   padding-right: 0.25em;
   margin-right: -0.25em;
 }
@@ -130,6 +131,8 @@ body {
 /* Map markers */
 .dh-marker {
   position: relative;
+  /* Own GPU layer, so moving it by fractions of a pixel each frame stays smooth */
+  will-change: transform;
   width: 44px;
   height: 44px;
   cursor: pointer;
@@ -164,10 +167,12 @@ body {
   opacity: 0;
 }
 .dh-marker:hover .dh-marker-dot,
+.dh-marker.is-hover .dh-marker-dot,
 .dh-marker.is-active .dh-marker-dot {
   background: var(--color-moss);
   transform: scale(1.18);
 }
+.dh-marker.is-hover .dh-marker-pulse,
 .dh-marker.is-active .dh-marker-pulse {
   animation: dh-pulse 1.8s ease-out infinite;
 }
@@ -228,4 +233,16 @@ body {
   .receipt-line {
     animation: none;
   }
+}
+
+/* Voucher scratch card: the coin that shows how to scratch, and the light running over the foil */
+@keyframes v-coin {
+  0%, 100% { transform: translate(-46px, 8px) rotate(-14deg); }
+  25% { transform: translate(34px, -8px) rotate(10deg); }
+  50% { transform: translate(-22px, 10px) rotate(-6deg); }
+  75% { transform: translate(46px, -4px) rotate(14deg); }
+}
+@keyframes v-sheen {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  55%, 100% { transform: translateX(260%) skewX(-18deg); }
 }

@@ -57,7 +57,7 @@ export default function DecemberPage() {
         <PriceList t={t} lang={lang} onBook={(c, items) => book({ category: c, note: items })} />
         <Reels t={t} lang={lang} onBook={(b) => book({ branch: b })} />
         <Lookbook t={t} lang={lang} onBook={(c, look) => book({ category: c, note: look })} />
-        <Voucher t={t} onBook={() => book()} />
+        <Voucher t={t} lang={lang} onBook={(note) => book({ note })} />
         <Branches t={t} onBook={(b) => book(b ? { branch: b } : undefined)} />
       </main>
       <Footer t={t} />

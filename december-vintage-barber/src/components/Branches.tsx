@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { BRANCHES, directionsUrl, type Dict } from "@/app/data";
-import { gsap, useGSAP, EASE, MQ_MOTION, ScrollTrigger } from "@/lib/gsap";
+import { gsap, useGSAP, EASE, MQ_MOTION, ScrollTrigger, getLenis } from "@/lib/gsap";
 import { useInView } from "@/lib/useInView";
 
 import FastMarquee from "react-fast-marquee";
@@ -67,6 +67,56 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
   const activeBranch = BRANCHES.find((b) => b.id === active);
   const mapBox = useRef<HTMLDivElement | null>(null);
   const [mapNear, setMapNear] = useState(false);
+  // Card and pin light up together, whichever one the pointer is on
+  const [hover, setHover] = useState<string | null>(null);
+
+  const list = useRef<HTMLUListElement | null>(null);
+  // Once the visitor hovers or picks a salon, the demo below stops for good
+  const touched = useRef(false);
+
+  // First time the list is in view, light each card and its pin in turn, once: it shows,
+  // without any hovering, that card and map belong together and the cards can be pressed
+  useEffect(() => {
+    const el = list.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timers: number[] = [];
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        const step = 900;
+        BRANCHES.forEach((b, i) =>
+          timers.push(window.setTimeout(() => !touched.current && setHover(b.id), 1200 + i * step))
+        );
+        timers.push(window.setTimeout(() => !touched.current && setHover(null), 1200 + BRANCHES.length * step));
+      },
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  // Only a moving pointer counts as the visitor's own hover (cards also slide under a resting one while scrolling)
+  const hoverBy = (id: string | null) => {
+    touched.current = true;
+    setHover(id);
+  };
+
+  // On phones the map sits above the list, so bring it into view to show where it flies
+  const pick = (id: string | null) => {
+    touched.current = true;
+    setActive(id);
+    const el = mapBox.current;
+    if (!id || !el || window.matchMedia("(min-width: 1024px)").matches) return;
+    const top = el.getBoundingClientRect().top;
+    if (top > 64 && top < window.innerHeight * 0.5) return;
+    const lenis = getLenis();
+    if (lenis) lenis.scrollTo(el, { offset: -80, duration: 1 });
+    else el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Fetch and parse MapLibre while the browser is idle after load, so it doesn't stall the scroll
   // when the map comes near. Skipped for visitors on data saver.
@@ -144,7 +194,15 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                 data-map
                 className="relative h-[60svh] lg:h-[78svh] lg:sticky lg:top-20 overflow-hidden rounded-[2px] bg-celadon"
               >
-                {mapNear && <BranchMap active={active} onSelect={setActive} labels={{ map: t.mapStreet, aerial: t.mapAerial }} />}
+                {mapNear && (
+                  <BranchMap
+                    active={active}
+                    onSelect={setActive}
+                    hover={hover}
+                    onHover={hoverBy}
+                    labels={{ map: t.mapStreet, aerial: t.mapAerial }}
+                  />
+                )}
                 <p className="pointer-events-none absolute left-4 top-4 label text-ink-soft bg-paper/85 px-3 py-1.5 rounded-full">
                   {active ? BRANCHES.find((b) => b.id === active)?.mall : t.mapHint}
                 </p>
@@ -166,35 +224,83 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
             </div>
 
             {/* List */}
-            <ul data-branch-list className="col-span-12 lg:col-span-5 lg:order-1 border-t border-ink/80">
+            <ul ref={list} data-branch-list className="col-span-12 lg:col-span-5 lg:order-1 border-t border-ink/80">
               {BRANCHES.map((b) => {
                 const on = active === b.id;
+                const lit = hover === b.id && !on;
                 return (
                   <li
                     key={b.id}
                     data-branch
+                    onMouseMove={() => hoverBy(b.id)}
+                    onMouseLeave={() => touched.current && setHover(null)}
                     className={`relative border-b px-6 transition-colors duration-500 ${
-                      on ? "bg-forest text-paper border-forest" : "border-ink/15 hover:bg-bone/60"
+                      on ? "bg-forest text-paper border-forest" : `border-ink/15 ${lit ? "bg-bone/60" : ""}`
                     }`}
                   >
+                    {/* Name, mall and address are one target: it shows the salon on the map */}
                     <button
-                      onClick={() => setActive(on ? null : b.id)}
-                      className="w-full text-left cursor-pointer pt-7 pb-3 group flex items-baseline justify-between gap-4 outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-4 focus-visible:ring-offset-transparent"
+                      onClick={() => pick(on ? null : b.id)}
+                      className="w-full text-left cursor-pointer pt-7 pb-1 group block outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-4 focus-visible:ring-offset-transparent"
                       aria-pressed={on}
                     >
+                      <span className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-3.5">
+                          {/* The same pin as on the map, so card and pin read as one */}
+                          <span
+                            aria-hidden
+                            className={`relative grid place-items-center w-9 h-9 shrink-0 rounded-full ring-[3px] transition-[transform,background-color] duration-500 ${
+                              on ? "bg-moss ring-paper/25 scale-110" : lit ? "bg-moss ring-paper scale-110" : "bg-forest ring-paper"
+                            }`}
+                          >
+                            <img src="/images/logo-d-white.png" alt="" className="w-[52%] h-[52%] object-contain" />
+                          </span>
+                          <span
+                            className={`block font-serif text-4xl sm:text-[2.75rem] leading-none tracking-[-0.02em] transition-colors duration-300 ${
+                              on ? "text-paper" : lit ? "text-moss" : ""
+                            }`}
+                          >
+                            {b.city}
+                          </span>
+                        </span>
+                        <span className={`label tabular-nums ${on ? "text-sage" : "text-ink-soft"}`}>{b.hours}</span>
+                      </span>
+                      {/* The address sits in a tile with an arrow: it reads as pressable before any hover */}
                       <span
-                        className={`block font-serif text-4xl sm:text-[2.75rem] leading-none tracking-[-0.02em] transition-colors duration-300 ${
-                          on ? "text-paper" : "group-hover:text-moss"
+                        className={`mt-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3.5 transition-colors duration-500 ${
+                          on ? "border-paper/25 bg-paper/5" : lit ? "border-moss bg-paper" : "border-ink/15 bg-paper/70"
                         }`}
                       >
-                        {b.city}
+                        <span className={`min-w-0 block text-sm space-y-0.5 ${on ? "text-paper/70" : "text-ink-soft"}`}>
+                          <span className={`block ${on ? "text-paper" : "text-ink"}`}>{b.mall}</span>
+                          <span className="block">{b.address}</span>
+                          <span className={`block pt-1.5 text-[13px] font-medium ${on ? "text-sage" : "text-moss"}`}>
+                            {on ? t.mapBack : t.mapShow}
+                          </span>
+                        </span>
+                        {/* A map pin, not an arrow: when this salon is on the map it pulses like its pin there */}
+                        <span
+                          aria-hidden
+                          className={`relative grid place-items-center w-10 h-10 shrink-0 rounded-full border transition-colors duration-500 ${
+                            on ? "border-moss bg-moss text-paper" : lit ? "border-forest bg-forest text-paper" : "border-ink/20 text-forest"
+                          }`}
+                        >
+                          {on && <span className="absolute inset-0 rounded-full bg-moss animate-[dh-pulse_1.8s_ease-out_infinite]" />}
+                          <svg
+                            viewBox="0 0 24 24"
+                            className={`relative w-[18px] h-[18px] transition-transform duration-500 ${lit ? "-translate-y-0.5" : ""}`}
+                            fill={on ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <path d="M12 21s-7-6.2-7-11.5a7 7 0 1 1 14 0C19 14.8 12 21 12 21Z" />
+                            <circle cx="12" cy="9.5" r="2.5" fill={on ? "var(--color-moss)" : "none"} stroke={on ? "none" : "currentColor"} />
+                          </svg>
+                        </span>
                       </span>
-                      <span className={`label tabular-nums ${on ? "text-sage" : "text-ink-soft"}`}>{b.hours}</span>
                     </button>
 
-                    <div className={`pb-7 text-sm space-y-1 ${on ? "text-paper/70" : "text-ink-soft"}`}>
-                      <p className={on ? "text-paper" : "text-ink"}>{b.mall}</p>
-                      <p>{b.address}</p>
+                    <div className="pb-7 text-sm">
                       <div className="flex flex-wrap items-center gap-2.5 pt-4">
                         <a
                           href={directionsUrl(b)}

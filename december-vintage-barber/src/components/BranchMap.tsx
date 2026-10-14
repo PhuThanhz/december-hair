@@ -64,7 +64,14 @@ function recolor(map: MLMap) {
     });
     const firstLabel = map.getStyle().layers?.find((l) => l.type === "symbol")?.id;
     map.addLayer(
-      { id: "ortho", type: "raster", source: "ortho", layout: { visibility: "none" }, paint: { "raster-fade-duration": 300 } },
+      {
+        id: "ortho",
+        type: "raster",
+        source: "ortho",
+        layout: { visibility: "none" },
+        // No opacity transition: the hidden preload must start invisible, not fade out from 1 (a flash)
+        paint: { "raster-fade-duration": 300, "raster-opacity": 0, "raster-opacity-transition": { duration: 0, delay: 0 } },
+      },
       firstLabel
     );
   }
@@ -130,14 +137,14 @@ const grow = (ring: Ring, k = 1.004): Ring => {
 };
 
 /** Light up the building under the salon's pin (and the ground around it); null clears it. */
-function highlight(map: MLMap, coords: [number, number] | null) {
+function highlight(map: MLMap, coords: [number, number] | null): boolean {
   const point = map.getSource("salon-point") as GeoJSONSource | undefined;
   const building = map.getSource("salon") as GeoJSONSource | undefined;
-  if (!point || !building) return;
+  if (!point || !building) return false;
   if (!coords) {
     point.setData({ type: "FeatureCollection", features: [] });
     building.setData({ type: "FeatureCollection", features: [] });
-    return;
+    return false;
   }
   point.setData({ type: "Feature", geometry: { type: "Point", coordinates: coords }, properties: {} });
   const at = map.project(coords);
@@ -170,11 +177,14 @@ function highlight(map: MLMap, coords: [number, number] | null) {
     geometry: { type: "MultiPolygon", coordinates: polygons },
     properties: { ...(parts[0]?.properties ?? {}) },
   });
+  return polygons.length > 0;
 }
 
 /** Swap between the drawn map and the aerial photo; labels flip to white so they stay legible. */
 function setAerial(map: MLMap, on: boolean) {
   if (!map.getLayer("ortho")) return;
+  // Opacity first, then visibility, so the layer never shows a frame at the old opacity
+  map.setPaintProperty("ortho", "raster-opacity", on ? 1 : 0);
   map.setLayoutProperty("ortho", "visibility", on ? "visible" : "none");
   map.setLayoutProperty("building-3d", "visibility", on ? "none" : "visible");
   map.setLayoutProperty("salon-building", "visibility", on ? "none" : "visible");
@@ -194,6 +204,18 @@ function setAerial(map: MLMap, on: boolean) {
   }
 }
 
+/** Load the aerial photo for the current view without showing it, so the later sweep never waits. */
+function preloadAerial(map: MLMap) {
+  if (!map.getLayer("ortho")) return;
+  map.setPaintProperty("ortho", "raster-opacity", 0);
+  map.setLayoutProperty("ortho", "visibility", "visible");
+}
+
+/** Seconds on the drawn map before the sweep reveals the aerial photo, and the sweep itself (ms). */
+const MAP_FIRST = 4000;
+const SWEEP = 1700;
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
 /** The brand's "D" in a green disc; the salon name is its accessible label. */
 function markerEl(label: string) {
   const el = document.createElement("button");
@@ -207,10 +229,15 @@ function markerEl(label: string) {
 export default function BranchMap({
   active,
   onSelect,
+  hover = null,
+  onHover,
   labels,
 }: {
   active: string | null;
   onSelect: (id: string) => void;
+  /** The salon whose card (or pin) is under the pointer: its pin lights up */
+  hover?: string | null;
+  onHover?: (id: string | null) => void;
   labels: { map: string; aerial: string };
 }) {
   const box = useRef<HTMLDivElement | null>(null);
@@ -222,14 +249,96 @@ export default function BranchMap({
   // Drone-style orbit around the selected salon
   const orbit = useRef(0);
   const onScreen = useRef(true);
+  // The map → aerial sweep: pending timer, running frame, the frozen map shot and the divider line
+  const sweepTimer = useRef(0);
+  const sweepFrame = useRef(0);
+  const sweeping = useRef(false);
+  const sweepEls = useRef<HTMLElement[]>([]);
+  // Bumped on every new pick and every cancelled sweep, so stale callbacks know to stand down
+  const flight = useRef(0);
+  const sweepRun = useRef(0);
+  // The aerial view was switched on by the sweep (not by the visitor), so it goes back with the salon
+  const autoAerial = useRef(false);
+  const clearSweep = () => {
+    window.clearTimeout(sweepTimer.current);
+    cancelAnimationFrame(sweepFrame.current);
+    sweepRun.current++;
+    sweepTimer.current = 0;
+    sweeping.current = false;
+    sweepEls.current.forEach((e) => e.remove());
+    sweepEls.current = [];
+  };
   const stopOrbit = () => {
     cancelAnimationFrame(orbit.current);
     orbit.current = 0;
+    // A hand on the map also calls off a sweep that hasn't started
+    window.clearTimeout(sweepTimer.current);
+  };
+
+  /**
+   * Freeze the drawn map as a picture on top, switch the real map underneath to the aerial photo
+   * (already loaded), then cut the picture away left to right behind a light line: for a moment
+   * it's half map, half photo. The orbit holds still meanwhile so both halves line up.
+   */
+  const sweep = (m: MLMap) => {
+    if (aerialRef.current) return;
+    sweeping.current = true;
+    const run = sweepRun.current;
+    m.once("render", () => {
+      // Called off (new salon, unmount) before this frame was drawn
+      if (run !== sweepRun.current) return;
+      // Still inside the frame that drew it, so the WebGL buffer can be copied
+      const src = m.getCanvas();
+      const shot = document.createElement("canvas");
+      shot.width = src.width;
+      shot.height = src.height;
+      shot.getContext("2d")?.drawImage(src, 0, 0);
+      shot.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none";
+      const line = document.createElement("div");
+      line.style.cssText =
+        "position:absolute;top:0;bottom:0;left:0;width:2px;margin-left:-1px;background:#f4f3ee;box-shadow:0 0 22px 3px rgba(15,26,18,.35);pointer-events:none;opacity:0";
+      // Right after the canvas: above the map, still under the pins
+      src.after(shot, line);
+      sweepEls.current = [shot, line];
+
+      autoAerial.current = true;
+      aerialRef.current = true;
+      setAerial(m, true);
+      setAerialState(true);
+
+      let started = false;
+      const go = () => {
+        if (started || run !== sweepRun.current) return;
+        started = true;
+        const t0 = performance.now();
+        const step = (now: number) => {
+          const p = Math.min(1, (now - t0) / SWEEP);
+          const x = easeInOut(p) * 100;
+          shot.style.clipPath = `inset(0 0 0 ${x}%)`;
+          line.style.left = `${x}%`;
+          line.style.opacity = String(Math.min(1, Math.min(p, 1 - p) * 12));
+          if (p < 1) sweepFrame.current = requestAnimationFrame(step);
+          else clearSweep();
+        };
+        sweepFrame.current = requestAnimationFrame(step);
+      };
+      // The photo is preloaded, so this is one frame; the timeout only guards a slow tile
+      m.once("idle", go);
+      window.setTimeout(go, 1200);
+    });
+    m.triggerRepaint();
   };
   const select = useRef(onSelect);
+  const hovered = useRef(onHover);
   useEffect(() => {
     select.current = onSelect;
-  }, [onSelect]);
+    hovered.current = onHover;
+  }, [onSelect, onHover]);
+
+  // Card under the pointer → its pin lights up and pulses
+  useEffect(() => {
+    Object.entries(markers.current).forEach(([id, mk]) => mk.getElement().classList.toggle("is-hover", id === hover));
+  }, [hover]);
 
   // Create the map once
   useEffect(() => {
@@ -298,13 +407,20 @@ export default function BranchMap({
       BRANCHES.forEach((b) => {
         const el = markerEl(b.mall);
         el.addEventListener("click", () => select.current(b.id));
-        markers.current[b.id] = new maplibregl.Marker({ element: el }).setLngLat(b.coords).addTo(m);
+        // Pin under the pointer → its card lights up
+        el.addEventListener("mouseenter", () => hovered.current?.(b.id));
+        el.addEventListener("mouseleave", () => hovered.current?.(null));
+        // Sub-pixel placement: during the slow orbit, whole-pixel rounding made the pin jitter by a pixel
+        markers.current[b.id] = new maplibregl.Marker({ element: el, subpixelPositioning: true })
+          .setLngLat(b.coords)
+          .addTo(m);
       });
     })();
 
     return () => {
       cancelled = true;
       stopOrbit();
+      clearSweep();
       map.current?.remove();
       map.current = null;
       markers.current = {};
@@ -313,7 +429,8 @@ export default function BranchMap({
 
   useEffect(() => {
     aerialRef.current = aerial;
-    if (map.current?.isStyleLoaded()) setAerial(map.current, aerial);
+    // Not isStyleLoaded(): that is false while any tile is still loading, which skipped the switch
+    if (map.current) setAerial(map.current, aerial);
   }, [aerial]);
 
   // Fly to the active branch, or back to the overview
@@ -327,16 +444,49 @@ export default function BranchMap({
     const b = BRANCHES.find((x) => x.id === active);
     highlight(m, null);
     stopOrbit();
+    clearSweep();
+    // Each salon starts on the drawn map again, unless the visitor chose the photo themselves
+    if (autoAerial.current) {
+      autoAerial.current = false;
+      aerialRef.current = false;
+      setAerialState(false);
+    }
+    setAerial(m, aerialRef.current);
     if (b) {
+      // A newer pick interrupts this flight and fires its "moveend" early: only the latest flight counts
+      const trip = ++flight.current;
       m.once("moveend", () => {
-        highlight(m, b.coords);
-        if (reduce) return;
+        if (trip !== flight.current) return;
+        if (reduce) {
+          highlight(m, b.coords);
+          return;
+        }
+        // Load the photo of this spot now, hidden, while the green block has the stage
+        if (!aerialRef.current) preloadAerial(m);
+        // The sweep's countdown starts only once the green block is actually standing
+        const later = () => {
+          if (trip !== flight.current || aerialRef.current) return;
+          if (!onScreen.current || document.hidden) sweepTimer.current = window.setTimeout(later, 1000);
+          else sweep(m);
+        };
+        const standing = () => {
+          if (trip !== flight.current) return;
+          sweepTimer.current = window.setTimeout(later, MAP_FIRST);
+        };
+        // Building tiles may still be arriving: try now, else once they have all landed
+        if (highlight(m, b.coords)) standing();
+        else
+          m.once("idle", () => {
+            if (trip !== flight.current) return;
+            highlight(m, b.coords);
+            standing();
+          });
         // Then circle the centre slowly, about one turn every 90 s, until someone touches the map
         let last = performance.now();
         const spin = (now: number) => {
           const dt = Math.min(now - last, 100);
           last = now;
-          if (onScreen.current && !document.hidden) m.setBearing(m.getBearing() + dt * 0.004);
+          if (onScreen.current && !document.hidden && !sweeping.current) m.setBearing(m.getBearing() + dt * 0.004);
           orbit.current = requestAnimationFrame(spin);
         };
         orbit.current = requestAnimationFrame(spin);
@@ -351,6 +501,7 @@ export default function BranchMap({
         essential: true,
       });
     } else {
+      flight.current++;
       m.fitBounds(OVERVIEW, { padding: 70, pitch: 0, bearing: 0, duration: reduce ? 0 : 1800 });
     }
   }, [active]);
@@ -379,7 +530,12 @@ export default function BranchMap({
           <button
             key={String(on)}
             type="button"
-            onClick={() => setAerialState(on)}
+            onClick={() => {
+              // The visitor's own choice: no automatic sweep or switch-back after this
+              window.clearTimeout(sweepTimer.current);
+              autoAerial.current = false;
+              setAerialState(on);
+            }}
             aria-pressed={aerial === on}
             className={`cursor-pointer rounded-full px-3.5 py-1.5 transition-colors ${
               aerial === on ? "bg-forest text-paper" : "text-ink-soft hover:text-ink"
