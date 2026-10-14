@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { BRANCHES, SERVICES, SOCIAL, type Dict, type Lang } from "@/app/data";
 import { gsap, useGSAP, getLenis } from "@/lib/gsap";
-import { isNavigating, scrollToSection } from "@/lib/scroll";
+import { isNavigating, scrollToSection, JUMP_EVENT, type SectionJump } from "@/lib/scroll";
 import Magnetic from "./Magnetic";
 
 // The sections reachable from the bar, top to bottom
@@ -103,14 +103,26 @@ export default function Header({
     };
   }, []);
 
-  // Scroll-spy: whichever section crosses the middle of the screen
+  // Scroll-spy: whichever section crosses the middle of the screen. It changes only once the
+  // section has settled for a moment, so a fast scroll doesn't flick the marker through every
+  // link; and during a jump picked from the page it stays on the destination.
   useEffect(() => {
     const seen = new Map<string, boolean>();
+    let spied: string | null = null;
+    let lockedUntil = 0;
+    let settle = 0;
+    const apply = (delay: number) => {
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        if (performance.now() >= lockedUntil) setCurrent(spied);
+      }, delay);
+    };
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => seen.set(e.target.id, e.isIntersecting));
         // Lowest section still crossing the middle (two can overlap the band at a boundary)
-        setCurrent(SECTIONS.filter((id) => seen.get(id)).pop() ?? null);
+        spied = SECTIONS.filter((id) => seen.get(id)).pop() ?? null;
+        apply(180);
       },
       { rootMargin: "-45% 0px -50% 0px" }
     );
@@ -118,8 +130,28 @@ export default function Header({
       const el = document.getElementById(id);
       if (el) io.observe(el);
     });
-    return () => io.disconnect();
+    const onJump = (e: Event) => {
+      const { id, ms } = (e as CustomEvent<SectionJump>).detail;
+      setCurrent(id);
+      lockedUntil = performance.now() + ms + 100;
+      apply(ms + 150);
+    };
+    window.addEventListener(JUMP_EVENT, onJump);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(settle);
+      window.removeEventListener(JUMP_EVENT, onJump);
+    };
   }, []);
+
+  // One marker glides under the lit link in the bar (rather than one line shrinking as another grows)
+  const navList = useRef<HTMLUListElement | null>(null);
+  const [marker, setMarker] = useState<{ x: number; w: number } | null>(null);
+  useLayoutEffect(() => {
+    const link = current ? navList.current?.querySelector<HTMLElement>(`a[href="#${current}"]`) : null;
+    // 12px each side: the link's own padding, so the line runs under the word only
+    if (link?.offsetParent) setMarker({ x: link.offsetLeft + 12, w: link.offsetWidth - 24 });
+  }, [current, lang]);
 
   // Keep the lit chip in view in the sideways row on phones
   useEffect(() => {
@@ -207,7 +239,7 @@ export default function Header({
 
           {/* Desktop: every section one click away, no menu to open */}
           <nav data-header-after aria-label={t.menu} className="hidden lg:block">
-            <ul className="flex items-center xl:gap-2">
+            <ul ref={navList} className="relative flex items-center xl:gap-2">
               {links.map((l) => {
                 const on = current === l.href.slice(1);
                 return (
@@ -216,21 +248,22 @@ export default function Header({
                       href={l.href}
                       onClick={(e) => jump(e, l.href)}
                       aria-current={on ? "location" : undefined}
-                      className={`relative block whitespace-nowrap px-3 py-2 text-sm transition-colors duration-300 ${
+                      className={`relative block whitespace-nowrap px-3 py-2 text-sm transition-colors duration-500 ${
                         on ? "text-ink" : "text-ink-soft hover:text-ink"
                       }`}
                     >
                       {l.label}
-                      <span
-                        aria-hidden
-                        className={`absolute inset-x-3 bottom-1 h-px origin-left bg-ink transition-transform duration-500 ease-[var(--ease-out-quint)] ${
-                          on ? "scale-x-100" : "scale-x-0"
-                        }`}
-                      />
                     </a>
                   </li>
                 );
               })}
+              <li
+                aria-hidden
+                className={`pointer-events-none absolute left-0 bottom-1 h-px origin-left bg-ink transition-[transform,width,opacity] duration-700 ease-[var(--ease-out-quint)] ${
+                  current && marker ? "opacity-100" : "opacity-0"
+                }`}
+                style={{ width: marker?.w ?? 0, transform: `translateX(${marker?.x ?? 0}px)` }}
+              />
             </ul>
           </nav>
 
@@ -288,7 +321,7 @@ export default function Header({
                     data-chip={id}
                     onClick={(e) => jump(e, l.href)}
                     aria-current={on ? "location" : undefined}
-                    className={`block whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] leading-5 transition-colors duration-300 ${
+                    className={`block whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] leading-5 transition-colors duration-500 ${
                       on ? "bg-forest border-forest text-paper" : "bg-paper/70 border-ink/15 text-ink-soft active:bg-bone"
                     }`}
                   >
