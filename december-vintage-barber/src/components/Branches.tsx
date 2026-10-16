@@ -253,7 +253,7 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                               on ? "bg-moss ring-paper/25 scale-110" : lit ? "bg-moss ring-paper scale-110" : "bg-forest ring-paper"
                             }`}
                           >
-                            <img src="/images/logo-d-white.png" alt="" className="w-[52%] h-[52%] object-contain" />
+                            <img src="/images/logo-d-white.png" alt="" loading="lazy" className="w-[52%] h-[52%] object-contain" />
                           </span>
                           <span
                             className={`block font-serif text-4xl sm:text-[2.75rem] leading-none tracking-[-0.02em] transition-colors duration-300 ${

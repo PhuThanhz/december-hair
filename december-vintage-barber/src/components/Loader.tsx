@@ -172,14 +172,14 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
         {/* Same proportions as the header brand (22px logo, 10px HAIR) so it lands exactly */}
         <div data-brand className="flex items-end will-change-transform [--h:min(10vw,120px)]">
           <div data-brand-word className="relative h-[var(--h)] aspect-[886/173]">
-            <Image src="/images/logo-wordmark-paper.png" alt="December" fill priority sizes="620px" className="object-contain" />
+            <Image src="/images/logo-wordmark-paper.png" alt="December" fill priority sizes="(max-width: 1200px) 52vw, 620px" className="object-contain" />
             <Image
               data-logo-ink
               src="/images/logo-wordmark-ink.png"
               alt=""
               fill
               priority
-              sizes="620px"
+              sizes="(max-width: 1200px) 52vw, 620px"
               className="object-contain opacity-0"
             />
           </div>

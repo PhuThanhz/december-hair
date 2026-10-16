@@ -220,8 +220,9 @@ export default function Header({
             <Image
               src="/images/logo-wordmark-ink.png"
               alt="December"
-              width={886}
-              height={173}
+              // Its rendered size (22px tall), so the srcset is 1x/2x of that rather than of the source
+              width={113}
+              height={22}
               priority
               className="h-[22px] w-auto"
             />
@@ -303,7 +304,7 @@ export default function Header({
         <div className="mx-auto max-w-[1600px] min-h-full px-5 sm:px-8 lg:px-12 flex flex-col">
           <div className="h-16 flex items-center justify-between">
             <span className="flex items-end">
-              <Image src="/images/logo-wordmark-paper.png" alt="December" width={886} height={173} className="h-[22px] w-auto" />
+              <Image src="/images/logo-wordmark-paper.png" alt="December" width={113} height={22} className="h-[22px] w-auto" />
               <span className="ml-2 pt-1 text-[10px] tracking-[0.32em] uppercase text-paper/60">Hair</span>
             </span>
             <button

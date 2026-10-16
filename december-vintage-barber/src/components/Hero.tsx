@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import type { Dict } from "@/app/data";
 import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_DESKTOP, MQ_MOTION } from "@/lib/gsap";
 import { playWhileVisible } from "@/lib/video";
@@ -17,25 +17,46 @@ const PANELS: Panel[] = [
   { kind: "video", src: "/videos/december-hair.mp4", poster: "/videos/december-hair-poster.jpg", alt: "Den v salonu December" },
 ];
 
-function Clip({ p }: { p: Panel }) {
+// Both layouts are in the HTML; at each width the hidden one's posters resolve to an empty inline GIF,
+// so the browser fetches only the posters it shows, straight from the HTML (no preload or lazy wait)
+const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const DESK = { sizes: "34vw", hideAt: "(max-width: 47.99rem)" };
+const PHONE = { sizes: "100vw", hideAt: "(min-width: 48rem)" };
+type Layout = typeof DESK;
+
+function Poster({ src, layout }: { src: string; layout: Layout }) {
+  // Resized and in WebP/AVIF by the image optimiser, like any next/image
+  const { props } = getImageProps({ src, alt: "", fill: true, sizes: layout.sizes });
   return (
-    <video
-      src={p.src}
-      poster={p.poster}
-      muted
-      loop
-      playsInline
-      // playWhileVisible starts it; the hidden layout (desktop on phones and vice versa) never downloads
-      preload="none"
-      aria-label={p.alt}
-      className="absolute inset-0 w-full h-full object-cover"
-    />
+    <picture>
+      <source media={layout.hideAt} srcSet={BLANK} />
+      <img {...props} alt="" loading="eager" fetchPriority="high" className="object-cover" />
+    </picture>
   );
 }
 
-function Media({ p, sizes }: { p: Panel; sizes: string }) {
-  if (p.kind === "video") return <Clip p={p} />;
-  return <Image src={p.src} alt={p.alt} fill priority quality={90} sizes={sizes} className="object-cover" />;
+function Clip({ p, layout }: { p: Panel; layout: Layout }) {
+  return (
+    <>
+      {/* The poster as a real image under the clip, shown until its first frame */}
+      {p.poster && <Poster src={p.poster} layout={layout} />}
+      <video
+        src={p.src}
+        muted
+        loop
+        playsInline
+        // playWhileVisible starts it; the hidden layout never downloads
+        preload="none"
+        aria-label={p.alt}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+    </>
+  );
+}
+
+function Media({ p, layout }: { p: Panel; layout: Layout }) {
+  if (p.kind === "video") return <Clip p={p} layout={layout} />;
+  return <Image src={p.src} alt={p.alt} fill priority quality={90} sizes={layout.sizes} className="object-cover" />;
 }
 
 const inOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -43,26 +64,17 @@ const inOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t
 const FRAME_START = "inset(16% 12% 16% 12%)";
 const FRAME_END = "inset(0% 0% 0% 0%)";
 
-// The brand's own "December" lettering (from the logo), as a smooth high-res alpha mask
-const MASK = "/images/logo-wordmark-mask.png";
+// The brand's own "December" lettering (from the logo), as a smooth high-res alpha mask (.hero-mask in globals.css)
 const MASK_RATIO = 2694 / 555;
-const maskStyle = {
-  WebkitMaskImage: `url(${MASK})`,
-  maskImage: `url(${MASK})`,
-  WebkitMaskSize: "100% 100%",
-  maskSize: "100% 100%",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-} as const;
 
 /**
  * The logo's "December" with a black-and-white, upside-down copy of the salon clip running through
  * its letters, over the clips behind it. The tint inside follows the text colour (dark on paper,
  * light over video). A CSS mask with the logo's alpha: crisp, and supported everywhere.
  */
-function Wordmark() {
+function Wordmark({ ready }: { ready: boolean }) {
   const fill = useRef<HTMLSpanElement | null>(null);
-  useEffect(() => (fill.current ? playWhileVisible(fill.current) : undefined), []);
+  useEffect(() => (ready && fill.current ? playWhileVisible(fill.current) : undefined), [ready]);
 
   // Pre-rendered: the centre clip's middle band, flipped upside down and in black and white, so the
   // browser only decodes a small video (no CSS filter or transform to redo every frame)
@@ -71,11 +83,11 @@ function Wordmark() {
   return (
     <span aria-hidden className="block overflow-hidden pb-[0.04em]">
       <span data-letter className="relative block" style={{ width: "4em", aspectRatio: MASK_RATIO }}>
-        <span ref={fill} className="absolute inset-0" style={maskStyle}>
+        <span ref={fill} className="hero-mask absolute inset-0">
           {/* The clip behind as a reflection: upside down, black and white */}
           <video
             src={inside.src}
-            poster={inside.poster}
+            data-poster={inside.poster}
             muted
             loop
             playsInline
@@ -93,8 +105,9 @@ function Wordmark() {
 export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
   const root = useRef<HTMLElement | null>(null);
 
-  // The hero clips stop decoding once the visitor has scrolled past
-  useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
+  // The clips wait for the loader to lift (the curtain hides them anyway), so the posters, fonts and
+  // scripts get the bandwidth first; they stop decoding once the visitor has scrolled past
+  useEffect(() => (ready && root.current ? playWhileVisible(root.current) : undefined), [ready]);
 
   // Scroll scene (desktop): the centre frame opens, side panels slide in, type turns white.
   // It works as a gate: the first nudge down glides to the open triptych and holds there,
@@ -208,7 +221,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
             <div key={i} data-panel={i} className="relative overflow-hidden">
               <div data-entry-frame={i === 1 ? "" : undefined} className="absolute inset-0">
                 <div data-panel-img className="absolute inset-0">
-                  <Media p={p} sizes="34vw" />
+                  <Media p={p} layout={DESK} />
                 </div>
               </div>
             </div>
@@ -218,7 +231,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div data-desk-word data-ink className="text-paper font-serif leading-[0.8] tracking-[-0.045em] text-[19vw] 2xl:text-[19rem]">
-            <Wordmark />
+            <Wordmark ready={ready} />
             <span data-hero-fade className="block text-right italic text-[4.2vw] 2xl:text-[4.2rem] leading-none tracking-normal -mt-[0.6vw] pr-[0.5vw]">
               Hair
             </span>
@@ -241,7 +254,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         >
           {/* Background Video with multi-stop luxury dark gradient */}
           <div className="absolute inset-0 z-0">
-            <Media p={PANELS[1]} sizes="100vw" />
+            <Media p={PANELS[1]} layout={PHONE} />
             <div className="absolute inset-0 bg-gradient-to-b from-forest/80 via-forest/25 to-forest/90 pointer-events-none" />
             <div className="absolute inset-0 bg-black/15 pointer-events-none" />
           </div>
@@ -265,7 +278,9 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
                   alt="December"
                   width={886}
                   height={173}
-                  priority
+                  // Lazy, so desktops (where this cover is hidden) skip it; phones still fetch it straight away
+                  fetchPriority="high"
+                  sizes="(max-width: 436px) 78vw, 340px"
                   className="w-[78vw] max-w-[340px] h-auto object-contain"
                 />
               </div>

@@ -191,6 +191,14 @@ body {
   background: rgba(244, 243, 238, 0.8) !important;
 }
 
+/* The hero's "December" lettering. Desktop only: phones never show it, so they never fetch the mask */
+@media (min-width: 48rem) {
+  .hero-mask {
+    -webkit-mask: url(/images/logo-wordmark-mask.webp) no-repeat 0 0 / 100% 100%;
+    mask: url(/images/logo-wordmark-mask.webp) no-repeat 0 0 / 100% 100%;
+  }
+}
+
 /* Underline timer under the lit verb in "About" */
 @keyframes aboutTimer {
   from { transform: scaleX(0); }

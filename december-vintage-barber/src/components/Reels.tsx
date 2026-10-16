@@ -153,7 +153,7 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
                   videos.current[i] = el;
                 }}
                 src={r.src}
-                poster={r.poster}
+                data-poster={r.poster}
                 data-hold={i !== active || undefined}
                 muted
                 loop
@@ -240,7 +240,7 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
               <div className="relative aspect-[9/16] rounded-3xl overflow-hidden border-4 border-[#223a2b] ring-1 ring-paper/20 shadow-xl bg-black">
                 <video
                   src={r.src}
-                  poster={r.poster}
+                  data-poster={r.poster}
                   muted
                   loop
                   playsInline

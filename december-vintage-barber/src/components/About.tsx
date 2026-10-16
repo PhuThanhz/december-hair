@@ -192,12 +192,12 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                       key={c}
                       data-frame={c}
                       src={`/videos/about-${c}.mp4`}
-                      poster={`/videos/about-${c}.jpg`}
+                      data-poster={`/videos/about-${c}.jpg`}
                       data-hold={c !== active || undefined}
                       muted
                       loop
                       playsInline
-                      preload="metadata"
+                      preload="none"
                       aria-label={t.aboutClips[c]}
                       className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-out ${c === active ? "opacity-100" : "opacity-0"}`}
                     />
@@ -227,12 +227,12 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                   <video
                     data-intext={c}
                     src={`/videos/about-${c}.mp4`}
-                    poster={`/videos/about-${c}.jpg`}
+                    data-poster={`/videos/about-${c}.jpg`}
                     data-hold={!on || undefined}
                     muted
                     loop
                     playsInline
-                    preload="metadata"
+                    preload="none"
                     aria-hidden
                     // Inset 1px so the clip's anti-aliased edge stays under the white sheet (no grey frame line)
                     className={`absolute inset-px w-[calc(100%-2px)] h-[calc(100%-2px)] object-cover [filter:contrast(1.25)_saturate(1.3)_brightness(0.82)] transition-opacity duration-1000 ease-out ${
