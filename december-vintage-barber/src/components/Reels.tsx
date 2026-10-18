@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { REELS, type Dict, type Lang } from "@/app/data";
 import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_DESKTOP, MQ_MOTION } from "@/lib/gsap";
+import { scrollToSection } from "@/lib/scroll";
 import Magnetic from "./Magnetic";
 import { playWhileVisible } from "@/lib/video";
 
@@ -59,10 +60,10 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
           scrollTrigger: {
             trigger: root.current,
             start: "top top",
-            end: `+=${(cards.length - 1) * 75}%`,
+            end: "+=120%",
             pin: true,
             anticipatePin: 1,
-            scrub: 0.6, // Silky smooth fluid response without inertia stutter or lag
+            scrub: 0.5,
           },
         });
         trigger.current = tween.scrollTrigger ?? null;
@@ -102,9 +103,10 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
   const goTo = (i: number) => {
     const st = trigger.current;
     if (!st) return;
-    const y = st.start + (i / (REELS.length - 1)) * (st.end - st.start);
+    const targetIdx = gsap.utils.clamp(0, REELS.length - 1, i);
+    const y = st.start + (targetIdx / (REELS.length - 1)) * (st.end - st.start);
     const lenis = getLenis();
-    if (lenis) lenis.scrollTo(y, { duration: 1.2 });
+    if (lenis) lenis.scrollTo(y, { duration: 0.6 });
     else window.scrollTo({ top: y, behavior: "smooth" });
   };
 
@@ -120,9 +122,41 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
               </span>
             </h2>
           </div>
-          <p className="label text-paper/60 tabular-nums pt-2">
-            {pad(active + 1)} / {pad(REELS.length)}
-          </p>
+
+          {/* Quick controls: Prev/Next, counter and 1-tap Skip */}
+          <div className="pointer-events-auto flex items-center gap-3.5 pt-2">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => goTo(active - 1)}
+                disabled={active === 0}
+                className="cursor-pointer w-8 h-8 rounded-full border border-paper/20 flex items-center justify-center text-xs text-paper/70 hover:text-paper hover:border-paper/60 hover:bg-paper/10 disabled:opacity-25 disabled:pointer-events-none transition-all"
+                aria-label="Předchozí video"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => goTo(active + 1)}
+                disabled={active === REELS.length - 1}
+                className="cursor-pointer w-8 h-8 rounded-full border border-paper/20 flex items-center justify-center text-xs text-paper/70 hover:text-paper hover:border-paper/60 hover:bg-paper/10 disabled:opacity-25 disabled:pointer-events-none transition-all"
+                aria-label="Další video"
+              >
+                →
+              </button>
+            </div>
+
+            <p className="label text-paper/60 tabular-nums text-xs">
+              {pad(active + 1)} / {pad(REELS.length)}
+            </p>
+
+            <button
+              onClick={() => scrollToSection("#salon")}
+              className="cursor-pointer group flex items-center gap-1.5 rounded-full border border-paper/25 bg-forest/80 backdrop-blur-md px-3.5 py-1.5 text-xs text-paper/90 hover:text-paper hover:border-paper/60 hover:bg-paper/15 active:scale-95 transition-all duration-300 shadow-sm"
+              title={lang === "cs" ? "Přeskočit na další sekci" : "Skip to next section"}
+            >
+              <span>{lang === "cs" ? "Přeskočit" : "Skip"}</span>
+              <span className="inline-block transition-transform duration-300 group-hover:translate-y-0.5">↓</span>
+            </button>
+          </div>
         </div>
 
         {/* Ambient lighting glow so the section does not feel dark or dull */}
