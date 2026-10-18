@@ -124,17 +124,16 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         gsap.set("[data-ink]", { color: "#0f1a12" });
 
         const tl = gsap.timeline({ defaults: { ease: "none" } });
-        tl.fromTo("[data-panel='1']", { clipPath: FRAME_START }, { clipPath: FRAME_END, duration: 1, immediateRender: false }, 0)
-          .to("[data-panel='0']", { clipPath: FRAME_END, duration: 0.8 }, 0.35)
-          .to("[data-panel='2']", { clipPath: FRAME_END, duration: 0.8 }, 0.45)
-          .to("[data-panel-img]", { scale: 1, duration: 1.25 }, 0)
-          .to("[data-shade]", { opacity: 1, duration: 0.6 }, 0.5)
-          .to("[data-ink]", { color: "#f4f3ee", duration: 0.5 }, 0.55)
-          .to("[data-desk-word]", { yPercent: -18, scale: 0.86, duration: 1.25 }, 0);
+        tl.fromTo("[data-panel='1']", { clipPath: FRAME_START }, { clipPath: FRAME_END, duration: 0.6, immediateRender: false }, 0)
+          .to("[data-panel='0']", { clipPath: FRAME_END, duration: 0.5 }, 0.1)
+          .to("[data-panel='2']", { clipPath: FRAME_END, duration: 0.5 }, 0.15)
+          .to("[data-panel-img]", { scale: 1, duration: 0.65 }, 0)
+          .to("[data-shade]", { opacity: 1, duration: 0.4 }, 0.2)
+          .to("[data-ink]", { color: "#f4f3ee", duration: 0.35 }, 0.2)
+          .to("[data-desk-word]", { yPercent: -18, scale: 0.86, duration: 0.65 }, 0);
 
         // Lenis is created in an effect that runs after this layout effect, so look it up lazily
         let state: "closed" | "moving" | "open" = "closed";
-        let hold = 0;
         // Only real gestures open the gate; layout shifts and scroll restoration also move scrollY
         let lastInput = -1e9;
         const input = () => (lastInput = performance.now());
@@ -145,14 +144,11 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
           if (!lenis) return;
           state = "moving";
           lenis.scrollTo(open ? st.end : st.start, {
-            duration: open ? 1.4 : 1.1,
-            easing: inOutCubic,
-            lock: true,
+            duration: open ? 0.55 : 0.45,
+            easing: (t) => 1 - Math.pow(1 - t, 3),
+            lock: false,
             onComplete: () => {
               state = open ? "open" : "closed";
-              // Swallow the tail of a trackpad flick so it doesn't carry on past the frame
-              lenis.stop();
-              hold = window.setTimeout(() => lenis.start(), 450);
             },
           });
         };
@@ -160,7 +156,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         ScrollTrigger.create({
           trigger: root.current,
           start: "top top",
-          end: "+=110%",
+          end: "+=50%",
           pin: true,
           scrub: true,
           animation: tl,
@@ -180,9 +176,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         });
 
         return () => {
-          window.clearTimeout(hold);
           inputs.forEach((e) => window.removeEventListener(e, input));
-          getLenis()?.start();
         };
       });
       return () => mm.revert();
