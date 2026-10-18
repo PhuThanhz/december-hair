@@ -52,7 +52,7 @@ export default function BookingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={t.modalTitle}>
+    <div className="fixed inset-0 z-[200] flex justify-end" role="dialog" aria-modal="true" aria-label={t.modalTitle}>
       <button aria-label={t.close} onClick={close} className="absolute inset-0 bg-forest/50 cursor-default animate-[fadeIn_0.6s_ease-out]" />
 
       <div data-lenis-prevent className="relative h-full w-full max-w-xl bg-paper overflow-y-auto px-6 sm:px-12 py-8 flex flex-col animate-[panelIn_0.9s_cubic-bezier(0.22,1,0.36,1)]">

@@ -199,7 +199,7 @@ export default function Header({
       <header
         ref={bar}
         data-site-header
-        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300 border-b ${
+        className={`fixed inset-x-0 top-0 z-[100] transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300 border-b ${
           solid ? "bg-paper/95 backdrop-blur-md border-ink/10 shadow-xs" : "bg-transparent border-transparent"
         }`}
       >
@@ -286,7 +286,7 @@ export default function Header({
         role="dialog"
         aria-modal="true"
         aria-label={t.menu}
-        className="invisible fixed inset-0 z-[70] bg-forest text-paper overflow-y-auto"
+        className="invisible fixed inset-0 z-[110] bg-forest text-paper overflow-y-auto"
         style={{ clipPath: "inset(0% 0% 100% 0%)" }}
       >
         <div className="mx-auto max-w-[1600px] min-h-full px-5 sm:px-8 lg:px-12 flex flex-col">

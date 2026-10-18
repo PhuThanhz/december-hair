@@ -131,10 +131,10 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
   }, [active, muted]);
 
   return (
-    <section ref={root} className="relative bg-forest text-paper overflow-hidden py-16 lg:py-20 border-t border-paper/10">
+    <section ref={root} className="relative z-10 bg-forest text-paper overflow-hidden py-16 lg:py-20 border-t border-paper/10">
       {/* Desktop: unpinned 3D interactive line-up */}
       <div className="hidden md:motion-safe:block relative h-[88svh] min-h-[660px] max-h-[860px]">
-        <div className="absolute inset-x-0 top-0 pt-6 px-8 lg:px-12 flex items-start justify-between z-[200] pointer-events-none">
+        <div className="absolute inset-x-0 top-0 pt-6 px-8 lg:px-12 flex items-start justify-between z-20 pointer-events-none">
           <div>
             <h2 data-reels-title className="font-serif text-[5.5vw] leading-[1.05] tracking-[-0.02em] pr-10 overflow-visible">
               <span className="line-mask pr-10 overflow-visible">
@@ -252,7 +252,7 @@ export default function Reels({ t, lang, onBook }: { t: Dict; lang: Lang; onBook
         </div>
 
         {/* Caption of the clip in front */}
-        <div className="absolute inset-x-0 bottom-0 px-8 lg:px-12 pb-6 flex items-end justify-between gap-8 z-[200] pointer-events-none">
+        <div className="absolute inset-x-0 bottom-0 px-8 lg:px-12 pb-6 flex items-end justify-between gap-8 z-20 pointer-events-none">
           <div key={reel.id} className="max-w-xl animate-[fadeIn_0.6s_ease-out] pointer-events-auto">
             <p className="label text-sage">{lang === "cs" ? reel.tagCs : reel.tagEn}</p>
             <p className="mt-2 font-serif italic text-3xl lg:text-4xl leading-tight">{lang === "cs" ? reel.cs : reel.en}</p>
