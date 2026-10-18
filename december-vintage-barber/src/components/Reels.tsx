@@ -84,21 +84,14 @@ export default function Reels({
 
   return (
     <section ref={root} className="relative z-10 bg-[#08100a] text-paper overflow-hidden py-16 sm:py-24 lg:py-28 border-t border-paper/10">
-      {/* Ambient Luxury Lighting */}
-      <div className="pointer-events-none absolute left-1/3 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[85vw] max-w-[1100px] h-[650px] bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(63,107,44,0.18),transparent_70%)] z-0" />
-      <div className="pointer-events-none absolute right-10 top-1/3 w-[50vw] max-w-[700px] h-[500px] bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(217,119,6,0.12),transparent_70%)] z-0" />
+      {/* Ambient Luxury Lighting (Pure subtle deep forest green, no yellow) */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] h-[650px] bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(63,107,44,0.15),transparent_70%)] z-0" />
 
       <div className="relative z-10 mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12">
-        {/* Editorial Section Header */}
+        {/* Editorial Section Header (Clean, elegant, no yellow badge) */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-8 border-b border-paper/10">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.8)]" />
-              <p className="label tracking-[0.25em] text-[10px] sm:text-xs text-amber-300/80 font-mono uppercase">
-                {lang === "cs" ? "Zákulisí & Služby salonu" : "Behind the Scenes & Services"}
-              </p>
-            </div>
-            <h2 className="mt-2.5 font-serif italic text-4xl sm:text-5xl lg:text-6xl tracking-tight">
+            <h2 className="font-serif italic text-4xl sm:text-5xl lg:text-6xl tracking-tight">
               {t.reelsTitle}
             </h2>
             <p className="mt-2 text-sm sm:text-base text-paper/70 font-serif italic max-w-lg">
@@ -108,53 +101,36 @@ export default function Reels({
             </p>
           </div>
 
-          {/* Navigation Controls */}
-          <div className="flex items-center gap-4 self-start sm:self-end">
-            <span className="hidden sm:inline-block label text-[10px] text-paper/40 font-mono tracking-wider">
+          {/* Counter Indicator */}
+          <div className="self-start sm:self-end">
+            <span className="label text-xs sm:text-sm text-paper/50 font-mono tracking-widest">
               {pad(active + 1)} / {pad(REELS.length)}
             </span>
-
-            {/* Prev / Next buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => scrollBy(-360)}
-                className="cursor-pointer w-10 h-10 rounded-full border border-paper/20 bg-forest/30 backdrop-blur-md flex items-center justify-center text-sm text-paper/80 hover:text-paper hover:border-paper hover:bg-forest transition-all shadow-sm active:scale-95"
-                aria-label="Předchozí video"
-              >
-                ←
-              </button>
-              <button
-                onClick={() => scrollBy(360)}
-                className="cursor-pointer w-10 h-10 rounded-full border border-paper/20 bg-forest/30 backdrop-blur-md flex items-center justify-center text-sm text-paper/80 hover:text-paper hover:border-paper hover:bg-forest transition-all shadow-sm active:scale-95"
-                aria-label="Další video"
-              >
-                →
-              </button>
-            </div>
-
-            {/* Global sound toggle */}
-            <button
-              onClick={() => {
-                const nextMuted = !muted;
-                setMuted(nextMuted);
-                if (videoRefs.current[active]) {
-                  videoRefs.current[active]!.muted = nextMuted;
-                  videoRefs.current[active]!.play().catch(() => {});
-                }
-              }}
-              className="cursor-pointer flex items-center gap-2 rounded-full border border-paper/20 bg-forest/40 backdrop-blur-md px-4 py-2 text-xs text-paper/90 hover:text-paper hover:border-paper/50 active:scale-95 transition-all shadow-xs"
-            >
-              <span>{muted ? "🔇" : "🔊"}</span>
-              <span className="hidden sm:inline font-mono text-[10px]">
-                {muted ? (lang === "cs" ? "Zapnout zvuk" : "Sound on") : (lang === "cs" ? "Ztlumit" : "Mute")}
-              </span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Horizontal Studio Video Cards Track */}
-      <div className="relative mt-8 sm:mt-12 select-none">
+      {/* Horizontal Studio Video Cards Track with Left & Right Flank Buttons */}
+      <div className="relative mt-8 sm:mt-12 select-none group/carousel">
+        {/* Left Arrow Button */}
+        <button
+          onClick={() => scrollBy(-380)}
+          className="cursor-pointer absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-forest text-paper border border-white/25 hover:border-white/70 backdrop-blur-md flex items-center justify-center text-lg sm:text-xl transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)] active:scale-90 hover:scale-105"
+          aria-label="Předchozí video"
+        >
+          ←
+        </button>
+
+        {/* Right Arrow Button */}
+        <button
+          onClick={() => scrollBy(380)}
+          className="cursor-pointer absolute right-3 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-forest text-paper border border-white/25 hover:border-white/70 backdrop-blur-md flex items-center justify-center text-lg sm:text-xl transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)] active:scale-90 hover:scale-105"
+          aria-label="Další video"
+        >
+          →
+        </button>
+
+        {/* Scrollable Track */}
         <div
           ref={trackRef}
           onMouseDown={onMouseDown}
@@ -162,7 +138,7 @@ export default function Reels({
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
           onScroll={onScroll}
-          className="flex gap-4 sm:gap-6 px-5 sm:px-8 lg:px-12 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
+          className="flex gap-4 sm:gap-6 px-6 sm:px-14 lg:px-20 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
         >
           {REELS.map((r, i) => {
             const isCurrent = i === active;
@@ -177,7 +153,7 @@ export default function Reels({
                   }
                 }}
                 className={`group relative shrink-0 snap-start w-[280px] sm:w-[320px] lg:w-[360px] aspect-[9/16] rounded-[24px] sm:rounded-[30px] overflow-hidden bg-black border border-white/10 transition-all duration-500 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85)] ${
-                  isCurrent ? "ring-2 ring-amber-400/80 scale-[1.01]" : "opacity-85 hover:opacity-100 hover:ring-1 hover:ring-white/30"
+                  isCurrent ? "ring-2 ring-white/80 scale-[1.01]" : "opacity-85 hover:opacity-100 hover:ring-1 hover:ring-white/40"
                 }`}
               >
                 {/* Video Player */}
@@ -204,28 +180,24 @@ export default function Reels({
                     {lang === "cs" ? r.tagCs : r.tagEn}
                   </span>
 
-                  <span className="label text-[10px] font-mono text-paper/70 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                    {pad(i + 1)}/06
-                  </span>
+                  {/* Sound Toggle Button on Card */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActive(i);
+                      const nextMuted = isCurrent ? !muted : false;
+                      setMuted(nextMuted);
+                      if (videoRefs.current[i]) {
+                        videoRefs.current[i]!.muted = nextMuted;
+                        videoRefs.current[i]!.play().catch(() => {});
+                      }
+                    }}
+                    className="cursor-pointer w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-xs text-paper hover:bg-forest hover:border-white/60 transition-all shadow-md active:scale-90"
+                    title={muted ? t.soundOn : t.soundOff}
+                  >
+                    {isCurrent && !muted ? "🔊" : "🔇"}
+                  </button>
                 </div>
-
-                {/* Sound Toggle Button on Card */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActive(i);
-                    const nextMuted = isCurrent ? !muted : false;
-                    setMuted(nextMuted);
-                    if (videoRefs.current[i]) {
-                      videoRefs.current[i]!.muted = nextMuted;
-                      videoRefs.current[i]!.play().catch(() => {});
-                    }
-                  }}
-                  className="cursor-pointer absolute top-14 right-4 z-10 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center justify-center text-xs text-paper hover:bg-forest hover:border-amber-400/50 transition-all shadow-md active:scale-90"
-                  title={muted ? t.soundOn : t.soundOff}
-                >
-                  {isCurrent && !muted ? "🔊" : "🔇"}
-                </button>
 
                 {/* Bottom Card Captions & Direct Booking CTA */}
                 <div className="absolute inset-x-0 bottom-0 p-5 z-10 flex flex-col justify-end text-paper">
@@ -234,7 +206,7 @@ export default function Reels({
                   </p>
 
                   <div className="mt-4 pt-3.5 border-t border-white/15 flex items-center justify-between gap-3">
-                    <span className="label text-[11px] text-amber-300 font-mono">
+                    <span className="label text-[11px] text-paper/70 font-mono">
                       {r.branch ? "OC Europark" : "December Hair"}
                     </span>
 
@@ -244,7 +216,7 @@ export default function Reels({
                           e.stopPropagation();
                           onBook(r.branch || "europark");
                         }}
-                        className="cursor-pointer whitespace-nowrap rounded-full bg-paper text-forest px-4 py-2 text-xs font-medium hover:bg-amber-300 transition-all duration-300 shadow-sm active:scale-95"
+                        className="cursor-pointer whitespace-nowrap rounded-full bg-paper text-forest px-4 py-2 text-xs font-medium hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,255,0.35)] transition-all duration-300 active:scale-95"
                       >
                         {t.filmBook} →
                       </button>
