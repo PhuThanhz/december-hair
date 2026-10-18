@@ -112,7 +112,7 @@ export default function Reels({
 
       {/* Horizontal Studio Video Cards Track */}
       <div className="relative mt-8 sm:mt-12 select-none group/carousel">
-        {/* Scrollable Track (Zero Obstruction, Pristine 9:16 Cards) */}
+        {/* Scrollable Track (Zero Obstruction, Pristine 9:16 Cards with Generous Side Breathing Room) */}
         <div
           ref={trackRef}
           onMouseDown={onMouseDown}
@@ -120,7 +120,7 @@ export default function Reels({
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
           onScroll={onScroll}
-          className="flex gap-4 sm:gap-6 px-5 sm:px-8 lg:px-12 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
+          className="flex gap-5 sm:gap-7 px-6 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 scroll-pl-6 sm:scroll-pl-12 lg:scroll-pl-20 xl:scroll-pl-28 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
         >
           {REELS.map((r, i) => {
             const isCurrent = i === active;
