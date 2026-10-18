@@ -72,24 +72,12 @@ export default function Header({
   // The section on screen right now, lit in the bar
   const [current, setCurrent] = useState<string | null>(null);
 
-  // Hide the bar while scrolling down, bring it back on the way up. Read once per frame and only
-  // start a tween when the state flips (scroll events fire far more often than frames).
+  // Header is always visible (Always Sticky). Update solid backdrop on scroll.
   useEffect(() => {
-    let last = window.scrollY;
-    let hidden = false;
     let frame = 0;
     const update = () => {
       frame = 0;
-      const y = window.scrollY;
-      setSolid(y > 40);
-      // Ignore trackpad jitter of a few pixels
-      if (Math.abs(y - last) < 6 && y > 200) return;
-      // A jump picked from the bar keeps the bar in view, so the next section is one tap away
-      const hide = y > last && y > 200 && !isNavigating();
-      last = y;
-      if (hide === hidden || !bar.current) return;
-      hidden = hide;
-      gsap.to(bar.current, { yPercent: hide ? -100 : 0, duration: 0.6, ease: "power3.out", overwrite: true });
+      setSolid(window.scrollY > 20);
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -211,8 +199,8 @@ export default function Header({
       <header
         ref={bar}
         data-site-header
-        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-500 border-b ${
-          solid ? "bg-paper border-ink/10" : "bg-transparent border-transparent"
+        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300 border-b ${
+          solid ? "bg-paper/95 backdrop-blur-md border-ink/10 shadow-xs" : "bg-transparent border-transparent"
         }`}
       >
         <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12 h-16 flex items-center justify-between gap-6">
@@ -268,7 +256,7 @@ export default function Header({
             <Magnetic>
               <button
                 onClick={onBook}
-                className="cursor-pointer whitespace-nowrap rounded-full bg-forest text-paper px-3.5 py-1.5 text-xs sm:px-5 sm:py-2.5 sm:text-sm font-medium hover:bg-moss transition-colors duration-500"
+                className="cursor-pointer whitespace-nowrap rounded-full bg-forest text-paper px-4 py-2 text-xs sm:px-5 sm:py-2.5 sm:text-sm font-medium hover:bg-moss active:scale-95 transition-all duration-300 shadow-sm"
               >
                 {t.book}
               </button>

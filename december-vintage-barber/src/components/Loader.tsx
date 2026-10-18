@@ -54,6 +54,7 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
         setGone(true);
         getLenis()?.start();
         try {
+          localStorage.setItem("dh-intro-seen", "1");
           sessionStorage.setItem("dh-intro", "1");
         } catch {}
         start();
@@ -61,13 +62,15 @@ export default function Loader({ line, onDone }: { line: string; onDone: () => v
 
       // A link straight to a section (…/#cenik) skips the intro and lands there
       const section = window.location.hash.length > 1 ? document.getElementById(window.location.hash.slice(1)) : null;
-      // The intro plays once per visit; reloads and returns in the same tab go straight to the page
+      // The intro plays once per visitor; returns and reloads bypass the animation entirely
       let seen = false;
       try {
-        seen = sessionStorage.getItem("dh-intro") === "1";
+        seen = localStorage.getItem("dh-intro-seen") === "1" || sessionStorage.getItem("dh-intro") === "1";
       } catch {}
 
       if (!window.matchMedia(MQ_MOTION).matches || !target || seen || section) {
+        gsap.set(target, { autoAlpha: 1 });
+        gsap.set(extras, { autoAlpha: 1 });
         finish();
         // Wait for the pinned scenes and the fonts, so the section is measured where it really is
         if (section) document.fonts.ready.then(() => window.setTimeout(() => scrollToSection(`#${section.id}`, { immediate: true }), 60));
