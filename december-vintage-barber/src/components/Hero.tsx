@@ -124,60 +124,22 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         gsap.set("[data-ink]", { color: "#0f1a12" });
 
         const tl = gsap.timeline({ defaults: { ease: "none" } });
-        tl.fromTo("[data-panel='1']", { clipPath: FRAME_START }, { clipPath: FRAME_END, duration: 0.6, immediateRender: false }, 0)
-          .to("[data-panel='0']", { clipPath: FRAME_END, duration: 0.5 }, 0.1)
-          .to("[data-panel='2']", { clipPath: FRAME_END, duration: 0.5 }, 0.15)
-          .to("[data-panel-img]", { scale: 1, duration: 0.65 }, 0)
-          .to("[data-shade]", { opacity: 1, duration: 0.4 }, 0.2)
-          .to("[data-ink]", { color: "#f4f3ee", duration: 0.35 }, 0.2)
-          .to("[data-desk-word]", { yPercent: -18, scale: 0.86, duration: 0.65 }, 0);
-
-        // Lenis is created in an effect that runs after this layout effect, so look it up lazily
-        let state: "closed" | "moving" | "open" = "closed";
-        // Only real gestures open the gate; layout shifts and scroll restoration also move scrollY
-        let lastInput = -1e9;
-        const input = () => (lastInput = performance.now());
-        const inputs = ["wheel", "touchmove", "keydown"] as const;
-        inputs.forEach((e) => window.addEventListener(e, input, { passive: true }));
-        const glide = (st: ScrollTrigger, open: boolean) => {
-          const lenis = getLenis();
-          if (!lenis) return;
-          state = "moving";
-          lenis.scrollTo(open ? st.end : st.start, {
-            duration: open ? 0.55 : 0.45,
-            easing: (t) => 1 - Math.pow(1 - t, 3),
-            lock: false,
-            onComplete: () => {
-              state = open ? "open" : "closed";
-            },
-          });
-        };
+        tl.fromTo("[data-panel='1']", { clipPath: FRAME_START }, { clipPath: FRAME_END, duration: 1, immediateRender: false }, 0)
+          .to("[data-panel='0']", { clipPath: FRAME_END, duration: 0.8 }, 0.2)
+          .to("[data-panel='2']", { clipPath: FRAME_END, duration: 0.8 }, 0.25)
+          .to("[data-panel-img]", { scale: 1, duration: 1 }, 0)
+          .to("[data-shade]", { opacity: 1, duration: 0.5 }, 0.4)
+          .to("[data-ink]", { color: "#f4f3ee", duration: 0.4 }, 0.45)
+          .to("[data-desk-word]", { yPercent: -18, scale: 0.86, duration: 1 }, 0);
 
         ScrollTrigger.create({
           trigger: root.current,
           start: "top top",
-          end: "+=50%",
+          end: "+=75%",
           pin: true,
-          scrub: true,
+          scrub: 0.8,
           animation: tl,
-          onUpdate: (st) => {
-            const lenis = getLenis();
-            if (!lenis || state === "moving" || performance.now() - lastInput > 400) return;
-            // Someone else's smooth scroll (menu links): let it pass straight through
-            if (lenis.isScrolling === "smooth") {
-              state = st.progress > 0.5 ? "open" : "closed";
-              return;
-            }
-            if (state === "closed" && st.direction === 1 && st.progress > 0) glide(st, true);
-            else if (state === "open" && st.direction === -1 && st.progress < 1) glide(st, false);
-          },
-          onLeave: () => state !== "moving" && (state = "open"),
-          onLeaveBack: () => state !== "moving" && (state = "closed"),
         });
-
-        return () => {
-          inputs.forEach((e) => window.removeEventListener(e, input));
-        };
       });
       return () => mm.revert();
     },
