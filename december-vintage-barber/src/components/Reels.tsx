@@ -110,25 +110,55 @@ export default function Reels({
         </div>
       </div>
 
-      {/* Horizontal Studio Video Cards Track with Left & Right Flank Buttons */}
+      {/* Horizontal Studio Video Cards Track with High-End Editorial Controls */}
       <div className="relative mt-8 sm:mt-12 select-none group/carousel">
-        {/* Left Arrow Button */}
-        <button
-          onClick={() => scrollBy(-380)}
-          className="cursor-pointer absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-forest text-paper border border-white/25 hover:border-white/70 backdrop-blur-md flex items-center justify-center text-lg sm:text-xl transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)] active:scale-90 hover:scale-105"
-          aria-label="Předchozí video"
-        >
-          ←
-        </button>
+        {/* Cinematic Soft Edge Vignettes */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[#08100a] via-[#08100a]/80 to-transparent z-20" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-[#08100a] via-[#08100a]/80 to-transparent z-20" />
 
-        {/* Right Arrow Button */}
-        <button
-          onClick={() => scrollBy(380)}
-          className="cursor-pointer absolute right-3 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-13 sm:h-13 rounded-full bg-black/75 hover:bg-forest text-paper border border-white/25 hover:border-white/70 backdrop-blur-md flex items-center justify-center text-lg sm:text-xl transition-all shadow-[0_10px_25px_rgba(0,0,0,0.8)] active:scale-90 hover:scale-105"
-          aria-label="Další video"
-        >
-          →
-        </button>
+        {/* Left Floating Magnetic Button */}
+        <div className="absolute left-3 sm:left-6 lg:left-8 top-1/2 -translate-y-1/2 z-30 pointer-events-auto">
+          <Magnetic strength={0.4}>
+            <button
+              onClick={() => scrollBy(-380)}
+              className="group cursor-pointer relative w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-paper/10 hover:bg-paper text-paper hover:text-forest backdrop-blur-2xl border border-white/20 hover:border-white shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-center transition-all duration-400 hover:scale-105 active:scale-95"
+              aria-label="Předchozí video"
+            >
+              <span className="absolute inset-0 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:-translate-x-1 relative z-10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </button>
+          </Magnetic>
+        </div>
+
+        {/* Right Floating Magnetic Button */}
+        <div className="absolute right-3 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-30 pointer-events-auto">
+          <Magnetic strength={0.4}>
+            <button
+              onClick={() => scrollBy(380)}
+              className="group cursor-pointer relative w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-paper/10 hover:bg-paper text-paper hover:text-forest backdrop-blur-2xl border border-white/20 hover:border-white shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-center transition-all duration-400 hover:scale-105 active:scale-95"
+              aria-label="Další video"
+            >
+              <span className="absolute inset-0 rounded-full bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity blur-md" />
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover:translate-x-1 relative z-10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+              </svg>
+            </button>
+          </Magnetic>
+        </div>
 
         {/* Scrollable Track */}
         <div
@@ -226,6 +256,26 @@ export default function Reels({
               </article>
             );
           })}
+        </div>
+
+        {/* Minimalist Editorial Progress Rail */}
+        <div className="mt-8 sm:mt-10 flex items-center justify-center gap-2.5">
+          {REELS.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setActive(idx);
+                if (trackRef.current) {
+                  const cardWidth = trackRef.current.firstElementChild?.clientWidth || 320;
+                  trackRef.current.scrollTo({ left: idx * (cardWidth + 20), behavior: "smooth" });
+                }
+              }}
+              className={`h-1 rounded-full transition-all duration-500 cursor-pointer ${
+                idx === active ? "w-8 sm:w-10 bg-paper shadow-[0_0_10px_rgba(244,239,230,0.5)]" : "w-2 sm:w-2.5 bg-paper/20 hover:bg-paper/50"
+              }`}
+              aria-label={`Přejít na video ${idx + 1}`}
+            />
+          ))}
         </div>
       </div>
     </section>
