@@ -19,7 +19,8 @@ export function proxy(request: NextRequest) {
     if (pathname !== "/admin/login" && !request.cookies.has(SESSION_COOKIE)) {
       const login = request.nextUrl.clone();
       login.pathname = "/admin/login";
-      login.search = "";
+      // Back to where they were going once signed in
+      login.search = `?next=${encodeURIComponent(pathname)}`;
       return NextResponse.redirect(login);
     }
     return NextResponse.next();
