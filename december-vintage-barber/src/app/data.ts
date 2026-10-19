@@ -1,7 +1,10 @@
 import type { Branch, Lang, Look, Panel, Reel, Service, SiteMedia } from "@/content/types";
 import { everyDay } from "@/lib/hours";
 
-// The site's content until the back office serves it (src/content/local.ts turns this into SiteContent)
+// The site's starting content. The live site reads the CMS (src/content/index.ts); this file is
+//   - the fallback the page renders when the API can't be reached (src/content/local.ts), and
+//   - the seed for a new database: npm run export:content, then `python -m app.cli seed` in backend/.
+// Editing it changes neither the CMS nor the live site.
 
 export const BRANCHES: Branch[] = [
   {

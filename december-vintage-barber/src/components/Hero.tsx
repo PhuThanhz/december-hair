@@ -6,6 +6,7 @@ import type { Dict, VideoSlot } from "@/content/types";
 import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_DESKTOP, MQ_MOTION } from "@/lib/gsap";
 import { playWhileVisible } from "@/lib/video";
+import { loaderFor } from "@/lib/media";
 
 // Vertical 1080×1920 clips fill a third of the screen at native sharpness
 type Panel = { kind: "image" | "video"; src: string; poster?: string; alt: string };
@@ -19,7 +20,7 @@ type Layout = typeof DESK;
 
 function Poster({ src, layout }: { src: string; layout: Layout }) {
   // Resized and in WebP/AVIF by the image optimiser, like any next/image
-  const { props } = getImageProps({ src, alt: "", fill: true, sizes: layout.sizes });
+  const { props } = getImageProps({ src, alt: "", fill: true, sizes: layout.sizes, loader: loaderFor(src) });
   return (
     <picture>
       <source media={layout.hideAt} srcSet={BLANK} />
@@ -49,7 +50,18 @@ function Clip({ p, layout }: { p: Panel; layout: Layout }) {
 
 function Media({ p, layout }: { p: Panel; layout: Layout }) {
   if (p.kind === "video") return <Clip p={p} layout={layout} />;
-  return <Image src={p.src} alt={p.alt} fill priority quality={90} sizes={layout.sizes} className="object-cover" />;
+  return (
+    <Image
+      src={p.src}
+      loader={loaderFor(p.src)}
+      alt={p.alt}
+      fill
+      priority
+      quality={90}
+      sizes={layout.sizes}
+      className="object-cover"
+    />
+  );
 }
 
 const inOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -65,7 +77,7 @@ const MASK_RATIO = 2694 / 555;
  * its letters, over the clips behind it. The tint inside follows the text colour (dark on paper,
  * light over video). A CSS mask with the logo's alpha: crisp, and supported everywhere.
  */
-function Wordmark({ ready, inside }: { ready: boolean; inside: VideoSlot }) {
+function Wordmark({ ready, inside }: { ready: boolean; inside: VideoSlot | null }) {
   const fill = useRef<HTMLSpanElement | null>(null);
   useEffect(() => (ready && fill.current ? playWhileVisible(fill.current) : undefined), [ready]);
 
@@ -77,8 +89,8 @@ function Wordmark({ ready, inside }: { ready: boolean; inside: VideoSlot }) {
         <span ref={fill} className="hero-mask absolute inset-0">
           {/* The clip behind as a reflection: upside down, black and white */}
           <video
-            src={inside.src}
-            data-poster={inside.poster}
+            src={inside?.src}
+            data-poster={inside?.poster ?? undefined}
             muted
             loop
             playsInline
@@ -96,7 +108,12 @@ function Wordmark({ ready, inside }: { ready: boolean; inside: VideoSlot }) {
 export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
   const { siteMedia } = useContent();
   const lang = useLang();
-  const panels: Panel[] = siteMedia.heroPanels.map((p) => ({ kind: "video", src: p.src, poster: p.poster, alt: p.alt[lang] }));
+  const panels: Panel[] = siteMedia.heroPanels.map((p) => ({
+    kind: "video",
+    src: p.src,
+    poster: p.poster ?? undefined,
+    alt: p.alt[lang],
+  }));
   const root = useRef<HTMLElement | null>(null);
 
   // The clips wait for the loader to lift (the curtain hides them anyway), so the posters, fonts and

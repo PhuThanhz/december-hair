@@ -193,8 +193,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                     <video
                       key={c}
                       data-frame={c}
-                      src={siteMedia.aboutClips[c].src}
-                      data-poster={siteMedia.aboutClips[c].poster}
+                      src={siteMedia.aboutClips[c]?.src}
+                      data-poster={siteMedia.aboutClips[c]?.poster ?? undefined}
                       data-hold={c !== active || undefined}
                       muted
                       loop
@@ -228,8 +228,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                 >
                   <video
                     data-intext={c}
-                    src={siteMedia.aboutClips[c].src}
-                    data-poster={siteMedia.aboutClips[c].poster}
+                    src={siteMedia.aboutClips[c]?.src}
+                    data-poster={siteMedia.aboutClips[c]?.poster ?? undefined}
                     data-hold={!on || undefined}
                     muted
                     loop

@@ -30,7 +30,7 @@ export function hoursOn(b: Branch, weekday: number, date?: string): { opens: str
   const special = date ? b.specialDays.find((s) => s.date === date) : undefined;
   if (special) return special.closed || !special.opens || !special.closes ? null : { opens: special.opens, closes: special.closes };
   const day = b.hours.find((h) => h.weekday === weekday);
-  return !day || day.closed ? null : { opens: day.opens, closes: day.closes };
+  return !day || day.closed || !day.opens || !day.closes ? null : { opens: day.opens, closes: day.closes };
 }
 
 /** Is the salon open right now; if so until when, if not when it opens next */
@@ -47,11 +47,11 @@ export function openState(b: Branch, now = new Date()) {
   return { open: false, time: "" };
 }
 
-const openDays = (b: Branch) => b.hours.filter((h) => !h.closed);
+const openDays = (b: Branch) => b.hours.filter((h) => !h.closed && h.opens && h.closes);
 
 /** Latest regular closing time across the salons, e.g. "20:00" */
 export function latestClose(branches: Branch[]) {
-  return branches.flatMap((b) => openDays(b).map((h) => h.closes)).sort().reverse()[0] ?? "";
+  return branches.flatMap((b) => openDays(b).map((h) => h.closes ?? "")).sort().reverse()[0] ?? "";
 }
 
 /** On how many weekdays at least one salon is open */
@@ -60,7 +60,8 @@ export function daysOpen(branches: Branch[]) {
 }
 
 const same = (a: OpeningHours, b: OpeningHours) => a.closed === b.closed && a.opens === b.opens && a.closes === b.closes;
-const range = (h: OpeningHours, closed: string) => (h.closed ? closed : `${h.opens} – ${h.closes}`);
+const range = (h: OpeningHours, closed: string) =>
+  h.closed || !h.opens || !h.closes ? closed : `${h.opens} – ${h.closes}`;
 
 /**
  * The week in one line: "09:00 – 20:00" when every day is the same, otherwise runs of equal days,

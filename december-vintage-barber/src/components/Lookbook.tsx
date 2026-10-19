@@ -7,6 +7,7 @@ import type { Category, Dict, Lang, Look, Service } from "@/content/types";
 import { useContent } from "@/content/ContentProvider";
 import { findService } from "@/content/helpers";
 import { czk, mins } from "@/lib/format";
+import { loaderFor } from "@/lib/media";
 import { useInView } from "@/lib/useInView";
 
 /** A look with the service behind it (its price and time) */
@@ -94,6 +95,7 @@ export default function Lookbook({
     >
       <Image
         src={item.image}
+        loader={loaderFor(item.image)}
         alt={name(item)}
         fill
         sizes="(max-width: 640px) 240px, (max-width: 1024px) 300px, 360px"
@@ -209,6 +211,7 @@ export default function Lookbook({
             <div className="md:col-span-6 relative aspect-[3/4] md:aspect-auto md:min-h-[460px] bg-bone overflow-hidden">
               <Image
                 src={spotlightItem.image}
+                loader={loaderFor(spotlightItem.image)}
                 alt={name(spotlightItem)}
                 fill
                 priority

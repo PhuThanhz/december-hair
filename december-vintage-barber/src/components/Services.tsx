@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { Category, Dict } from "@/content/types";
 import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
+import { loaderFor } from "@/lib/media";
 
 /**
  * "Mirrors for the whole family": everyone we cut for on one screen, like the mirrors along
@@ -70,15 +71,18 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                   on ? "h-[440px] md:grow-[2.6]" : "h-[76px] md:grow"
                 }`}
               >
-                <Image
-                  src={p.image}
-                  alt={copy.name}
-                  fill
-                  quality={90}
-                  sizes="(max-width: 768px) 100vw, 45vw"
-                  style={{ objectPosition: p.focus }}
-                  className="object-cover"
-                />
+                {p.image && (
+                  <Image
+                    src={p.image}
+                    loader={loaderFor(p.image)}
+                    alt={copy.name}
+                    fill
+                    quality={90}
+                    sizes="(max-width: 768px) 100vw, 45vw"
+                    style={{ objectPosition: p.focus }}
+                    className="object-cover"
+                  />
+                )}
                 <div
                   className={`absolute inset-0 transition-colors duration-700 ${
                     on
@@ -114,7 +118,7 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onBook(p.bookingCategory);
+                      onBook(p.bookingCategory ?? undefined);
                     }}
                     className="mt-7 cursor-pointer rounded-full bg-paper text-forest px-6 py-3 text-sm font-medium hover:bg-sage transition-colors"
                   >

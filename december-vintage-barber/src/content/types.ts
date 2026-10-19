@@ -11,21 +11,21 @@ export const CATEGORIES: Category[] = ["women", "men", "kids", "spa"];
 /** The same text in both languages */
 export type L10n = Record<Lang, string>;
 
-/** One weekday's hours. weekday: 0 = Monday … 6 = Sunday; times "HH:MM" in Prague time */
+/** One weekday's hours. weekday: 0 = Monday … 6 = Sunday; times "HH:MM" in Prague time (null when closed) */
 export interface OpeningHours {
   weekday: number;
-  opens: string;
-  closes: string;
+  opens: string | null;
+  closes: string | null;
   closed: boolean;
 }
 
 /** A date that differs from the weekly hours (holiday, short day). date: "YYYY-MM-DD" */
 export interface SpecialDay {
   date: string;
-  opens?: string;
-  closes?: string;
+  opens?: string | null;
+  closes?: string | null;
   closed: boolean;
-  label?: L10n;
+  label?: L10n | null;
 }
 
 export interface Branch {
@@ -40,12 +40,12 @@ export interface Branch {
   /** Digits for tel: links */
   phoneRaw: string;
   /** Where booking requests for this salon are emailed */
-  email?: string;
+  email?: string | null;
   /** [longitude, latitude] */
   coords: [number, number];
   /** Camera for the close-up on the map */
   map: { bearing: number; zoom: number; pitch: number };
-  image: string;
+  image: string | null;
   googleMapsUrl: string;
   /** "Book at …" with the right grammar, e.g. "Rezervovat v Europarku" */
   bookAt: L10n;
@@ -64,7 +64,7 @@ export interface Service {
   price: number;
   /** Price is a starting price ("od") */
   priceFrom: boolean;
-  image: string;
+  image: string | null;
 }
 
 /** A look in the portfolio; price and time come from its service */
@@ -80,21 +80,21 @@ export interface Look {
 export interface Reel {
   id: string;
   video: string;
-  poster: string;
+  poster: string | null;
   tag: L10n;
   caption: L10n;
   /** Branch id, when the reel is about one salon */
-  branch?: string;
+  branch?: string | null;
 }
 
 /** "For the whole family": one mirror per kind of guest */
 export interface Panel {
   id: string;
-  image: string;
+  image: string | null;
   /** object-position keeping the face in a narrow mirror */
   focus: string;
   /** Where booking from this panel starts; none keeps the current choice */
-  bookingCategory?: Category;
+  bookingCategory?: Category | null;
   name: L10n;
   line: L10n;
   tags: Record<Lang, string[]>;
@@ -102,15 +102,16 @@ export interface Panel {
 
 export interface VideoSlot {
   src: string;
-  poster: string;
+  poster: string | null;
 }
 
 export interface SiteMedia {
   heroPanels: (VideoSlot & { alt: L10n })[];
-  heroReflection: VideoSlot;
-  aboutClips: Record<"cut" | "colour" | "care", VideoSlot>;
+  heroReflection: VideoSlot | null;
+  aboutClips: Record<"cut" | "colour" | "care", VideoSlot | null>;
 }
 
+/** Everything the site renders: GET /api/v1/public/content (the backend's schemas/content.py) */
 export interface SiteContent {
   texts: Record<Lang, Dict>;
   branches: Branch[];
@@ -118,10 +119,10 @@ export interface SiteContent {
   looks: Look[];
   reels: Reel[];
   panels: Panel[];
-  voucher: { options: number[]; defaultAmount: number };
+  voucher: { options: number[]; defaultAmount: number | null };
   siteMedia: SiteMedia;
   social: { instagram: string; facebook: string };
-  settings: { defaultBranch: string };
+  settings: { defaultBranch: string | null };
   legal: { companyName: string; ico: string; address: string } | null;
   updatedAt: string;
 }

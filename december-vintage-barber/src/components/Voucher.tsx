@@ -476,7 +476,7 @@ export default function Voucher({
 }) {
   const { services, voucher } = useContent();
   const root = useRef<HTMLElement | null>(null);
-  const [value, setValue] = useState<Value>(voucher.defaultAmount);
+  const [value, setValue] = useState<Value>(voucher.defaultAmount ?? voucher.options[0] ?? 0);
   const [revealed, setRevealed] = useState(false);
   const onReveal = useCallback(() => setRevealed(true), []);
   const onCover = useCallback(() => setRevealed(false), []);

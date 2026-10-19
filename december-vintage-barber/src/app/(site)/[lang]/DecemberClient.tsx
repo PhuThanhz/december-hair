@@ -19,8 +19,17 @@ import Branches from "@/components/Branches";
 import Footer from "@/components/Footer";
 import BookingModal from "@/components/BookingModal";
 
-export default function DecemberClient({ content }: { content: SiteContent }) {
-  const [lang, setLang] = useState<Lang>("cs");
+/** Czech lives at /, English at /en */
+const pathFor = (lang: Lang) => (lang === "en" ? "/en" : "/");
+
+export default function DecemberClient({ content, initialLang }: { content: SiteContent; initialLang: Lang }) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
+  // Switching stays instant (both languages are already here) and leaves the address on the
+  // language's own URL, so a reload or a shared link opens the same language
+  const setLang = useCallback((next: Lang) => {
+    setLangState(next);
+    window.history.replaceState(null, "", pathFor(next) + window.location.hash);
+  }, []);
   // The texts with the salons filled in ({count}, {cities}…), so they follow the branch list
   const t = useMemo(() => {
     const dict = content.texts[lang];
@@ -29,7 +38,7 @@ export default function DecemberClient({ content }: { content: SiteContent }) {
   const [ready, setReady] = useState(false);
 
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [branch, setBranch] = useState(content.settings.defaultBranch);
+  const [branch, setBranch] = useState(content.settings.defaultBranch ?? content.branches[0]?.id ?? "");
   const [category, setCategory] = useState<Category>("women");
   const [note, setNote] = useState("");
 
