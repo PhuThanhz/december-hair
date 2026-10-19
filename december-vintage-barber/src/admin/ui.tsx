@@ -144,11 +144,12 @@ export function Dialog({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6" role="dialog" aria-modal="true" aria-label={title}>
-      <button aria-label={closeLabel} onClick={onClose} className="absolute inset-0 bg-forest/40 cursor-default" />
+      {/* type="button": a dialog can open inside another dialog's form, and must never submit it */}
+      <button type="button" aria-label={closeLabel} onClick={onClose} className="absolute inset-0 bg-forest/40 cursor-default" />
       <div ref={box} className="relative w-full sm:max-w-lg max-h-[92svh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-paper p-6 sm:p-8 shadow-2xl">
         <div className="flex items-start justify-between gap-4 mb-6">
           <h2 className="font-serif text-2xl tracking-[-0.01em]">{title}</h2>
-          <button onClick={onClose} className="text-sm text-ink-soft hover:text-ink cursor-pointer">
+          <button type="button" onClick={onClose} className="text-sm text-ink-soft hover:text-ink cursor-pointer">
             {closeLabel}
           </button>
         </div>

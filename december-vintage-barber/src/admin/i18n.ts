@@ -1,3 +1,4 @@
+import { CMS_DICTS } from "./i18n-cms";
 import type { Role, UiLang } from "./types";
 
 // The admin's own words, English and Czech; each user picks theirs (users.ui_lang)
@@ -19,13 +20,24 @@ const en = {
 
   nav: {
     dashboard: "Dashboard",
-    content: "Texts & content",
+    groupContent: "Content",
+    texts: "Texts",
+    services: "Services & prices",
+    lookbook: "Lookbook",
+    reels: "Reels",
+    panels: "For the whole family",
+    siteMedia: "Hero & About videos",
+    pages: "Pages",
     branches: "Branches",
     media: "Media library",
     seo: "SEO",
+    groupInbox: "Requests",
     bookings: "Bookings",
     vouchers: "Voucher orders",
+    groupAdmin: "Administration",
     users: "Users",
+    settings: "Settings",
+    activity: "Activity",
     account: "My account",
   } as Record<string, string>,
 
@@ -121,13 +133,24 @@ const cs: AdminDict = {
 
   nav: {
     dashboard: "Přehled",
-    content: "Texty a obsah",
+    groupContent: "Obsah",
+    texts: "Texty",
+    services: "Služby a ceny",
+    lookbook: "Lookbook",
+    reels: "Reels",
+    panels: "Pro celou rodinu",
+    siteMedia: "Videa Hero a O nás",
+    pages: "Stránky",
     branches: "Pobočky",
     media: "Knihovna médií",
     seo: "SEO",
+    groupInbox: "Žádosti",
     bookings: "Rezervace",
     vouchers: "Objednávky poukazů",
+    groupAdmin: "Správa",
     users: "Uživatelé",
+    settings: "Nastavení",
+    activity: "Aktivita",
     account: "Můj účet",
   },
 
@@ -203,7 +226,10 @@ const cs: AdminDict = {
   },
 };
 
-export const ADMIN_DICTS: Record<UiLang, AdminDict> = { en, cs };
+export const ADMIN_DICTS: Record<UiLang, AdminDict & { cms: (typeof CMS_DICTS)["en"] }> = {
+  en: { ...en, cms: CMS_DICTS.en },
+  cs: { ...cs, cms: CMS_DICTS.cs },
+};
 
 export const fmt = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 

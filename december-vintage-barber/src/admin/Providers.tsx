@@ -3,12 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "./api";
-import { ADMIN_DICTS, type AdminDict } from "./i18n";
+import { ADMIN_DICTS } from "./i18n";
 import type { Me, UiLang } from "./types";
 
 const LANG_KEY = "dh_admin_lang";
 
-const I18n = createContext<{ lang: UiLang; t: AdminDict; setLang: (l: UiLang) => void } | null>(null);
+const I18n = createContext<{ lang: UiLang; t: (typeof ADMIN_DICTS)["en"]; setLang: (l: UiLang) => void } | null>(
+  null
+);
 
 /** The signed-in user; null when signed out (a 401), never retried */
 export function useMe() {
