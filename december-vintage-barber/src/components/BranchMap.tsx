@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MLMap, Marker } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { BRANCHES } from "@/app/data";
+import type { Branch } from "@/content/types";
+import { useContent } from "@/content/ContentProvider";
+import { findBranch } from "@/content/helpers";
 
 // Free vector tiles, no API key. Recoloured below to the site's green & white.
 const STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -11,11 +13,16 @@ const STYLE = "https://tiles.openfreemap.org/styles/positron";
 // Official Czech aerial photos (ČÚZK open data, ~20 cm/px), Web Mercator tiles, no API key
 const ORTHO = "https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}";
 
-// Frames all three salons in the overview
-const OVERVIEW: [[number, number], [number, number]] = [
-  [13.98, 49.97],
-  [15.05, 50.5],
-];
+/** The overview frames every salon, with a margin around the outermost ones */
+function overview(branches: Branch[]): [[number, number], [number, number]] {
+  if (!branches.length) return [[12.09, 48.55], [18.86, 51.06]]; // all of Czechia
+  const lng = branches.map((b) => b.coords[0]);
+  const lat = branches.map((b) => b.coords[1]);
+  return [
+    [Math.min(...lng) - 0.15, Math.min(...lat) - 0.09],
+    [Math.max(...lng) + 0.15, Math.max(...lat) + 0.09],
+  ];
+}
 
 const PALETTE = {
   land: "#f4f3ee",
@@ -238,8 +245,11 @@ export default function BranchMap({
   /** The salon whose card (or pin) is under the pointer: its pin lights up */
   hover?: string | null;
   onHover?: (id: string | null) => void;
-  labels: { map: string; aerial: string };
+  labels: { map: string; aerial: string; aria: string };
 }) {
+  const { branches } = useContent();
+  // Read inside the map's own effects, which run once
+  const branchList = useRef(branches);
   const box = useRef<HTMLDivElement | null>(null);
   const map = useRef<MLMap | null>(null);
   const markers = useRef<Record<string, Marker>>({});
@@ -362,7 +372,7 @@ export default function BranchMap({
         m = new maplibregl.Map({
         container: box.current,
         style: STYLE,
-        bounds: OVERVIEW,
+        bounds: overview(branchList.current),
         fitBoundsOptions: { padding: 70 },
         attributionControl: { compact: true },
         cooperativeGestures: touch,
@@ -404,7 +414,7 @@ export default function BranchMap({
       if (box.current) io.observe(box.current);
       m.once("remove", () => io.disconnect());
 
-      BRANCHES.forEach((b) => {
+      branchList.current.forEach((b) => {
         const el = markerEl(b.mall);
         el.addEventListener("click", () => select.current(b.id));
         // Pin under the pointer → its card lights up
@@ -441,7 +451,7 @@ export default function BranchMap({
       mk.getElement().classList.toggle("is-active", id === active)
     );
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const b = BRANCHES.find((x) => x.id === active);
+    const b = findBranch(branchList.current, active);
     highlight(m, null);
     stopOrbit();
     clearSweep();
@@ -493,25 +503,26 @@ export default function BranchMap({
       });
       m.flyTo({
         center: b.coords,
-        zoom: 16.2,
-        pitch: 58,
-        bearing: [-28, 20, -12][BRANCHES.indexOf(b)],
+        zoom: b.map.zoom,
+        pitch: b.map.pitch,
+        bearing: b.map.bearing,
         duration: reduce ? 0 : 2600,
         curve: 1.6,
         essential: true,
       });
     } else {
       flight.current++;
-      m.fitBounds(OVERVIEW, { padding: 70, pitch: 0, bearing: 0, duration: reduce ? 0 : 1800 });
+      m.fitBounds(overview(branchList.current), { padding: 70, pitch: 0, bearing: 0, duration: reduce ? 0 : 1800 });
     }
   }, [active]);
 
   if (failed) {
-    const b = BRANCHES.find((x) => x.id === active) ?? BRANCHES[0];
+    const b = findBranch(branches, active) ?? branches[0];
+    if (!b) return null;
     return (
       <iframe
         key={b.id}
-        title={`Mapa — ${b.mall}`}
+        title={`${labels.map} — ${b.mall}`}
         src={`https://www.google.com/maps?q=${b.coords[1]},${b.coords[0]}&z=15&output=embed`}
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
@@ -524,7 +535,7 @@ export default function BranchMap({
   // MapLibre forces position: relative on its container, so size it from a wrapper
   return (
     <div className="absolute inset-0">
-      <div ref={box} className="w-full h-full" aria-label="Mapa poboček" />
+      <div ref={box} className="w-full h-full" aria-label={labels.aria} />
       <div className="absolute right-4 top-4 z-10 flex rounded-full bg-paper/90 p-1 text-xs font-medium shadow-sm">
         {[false, true].map((on) => (
           <button

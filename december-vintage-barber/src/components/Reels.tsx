@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { REELS, type Dict, type Lang } from "@/app/data";
+import type { Dict, Lang } from "@/content/types";
+import { useContent } from "@/content/ContentProvider";
+import { findBranch } from "@/content/helpers";
 import { playWhileVisible } from "@/lib/video";
 import Magnetic from "./Magnetic";
 
@@ -24,6 +26,9 @@ export default function Reels({
   lang: Lang;
   onBook: (branchId: string) => void;
 }) {
+  const { reels, branches, settings } = useContent();
+  // A reel about one salon books that salon; the others book the default one
+  const home = findBranch(branches, settings.defaultBranch) ?? branches[0];
   const root = useRef<HTMLElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
@@ -79,8 +84,8 @@ export default function Reels({
     const scrollPos = trackRef.current.scrollLeft;
     const cardWidth = trackRef.current.firstElementChild?.clientWidth || 320;
     const newIdx = Math.round(scrollPos / (cardWidth + 20));
-    setActive(Math.max(0, Math.min(REELS.length - 1, newIdx)));
-  }, []);
+    setActive(Math.max(0, Math.min(reels.length - 1, newIdx)));
+  }, [reels.length]);
 
   return (
     <section ref={root} className="relative z-10 bg-[#08100a] text-paper overflow-hidden py-16 sm:py-24 lg:py-28 border-t border-paper/10">
@@ -95,16 +100,14 @@ export default function Reels({
               {t.reelsTitle}
             </h2>
             <p className="mt-2 text-sm sm:text-base text-paper/70 font-serif italic max-w-lg">
-              {lang === "cs"
-                ? "Nahlédněte do atmosféry našich salonů v Praze, Kladně a Mladé Boleslavi."
-                : "Experience the unique atmosphere of our salons in Prague, Kladno and Mladá Boleslav."}
+              {t.reelsBody}
             </p>
           </div>
 
           {/* Counter Indicator */}
           <div className="self-start sm:self-end">
             <span className="label text-xs sm:text-sm text-paper/50 font-mono tracking-widest">
-              {pad(active + 1)} / {pad(REELS.length)}
+              {pad(active + 1)} / {pad(reels.length)}
             </span>
           </div>
         </div>
@@ -122,8 +125,10 @@ export default function Reels({
           onScroll={onScroll}
           className="flex gap-5 sm:gap-7 px-6 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 scroll-pl-6 sm:scroll-pl-12 lg:scroll-pl-20 xl:scroll-pl-28 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
         >
-          {REELS.map((r, i) => {
+          {reels.map((r, i) => {
             const isCurrent = i === active;
+            const own = findBranch(branches, r.branch);
+            const target = own ?? home;
             return (
               <article
                 key={r.id}
@@ -143,7 +148,7 @@ export default function Reels({
                   ref={(el) => {
                     videoRefs.current[i] = el;
                   }}
-                  src={r.src}
+                  src={r.video}
                   data-poster={r.poster}
                   muted={i === active ? muted : true}
                   loop
@@ -159,7 +164,7 @@ export default function Reels({
                 {/* Top Badge: Category & Counter */}
                 <div className="absolute top-4 inset-x-4 z-10 flex items-center justify-between">
                   <span className="label text-[10px] font-mono px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-paper">
-                    {lang === "cs" ? r.tagCs : r.tagEn}
+                    {r.tag[lang]}
                   </span>
 
                   {/* Sound Toggle Button on Card (Refined Minimalist SVG Icon) */}
@@ -192,25 +197,27 @@ export default function Reels({
                 {/* Bottom Card Captions & Direct Booking CTA */}
                 <div className="absolute inset-x-0 bottom-0 p-5 z-10 flex flex-col justify-end text-paper">
                   <p className="font-serif italic text-xl sm:text-2xl leading-snug drop-shadow-md">
-                    {lang === "cs" ? r.cs : r.en}
+                    {r.caption[lang]}
                   </p>
 
                   <div className="mt-4 pt-3.5 border-t border-white/15 flex items-center justify-between gap-3">
                     <span className="label text-[11px] text-paper/70 font-mono">
-                      {r.branch ? "OC Europark" : "December Hair"}
+                      {own ? own.shortName : "December Hair"}
                     </span>
 
-                    <Magnetic>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onBook(r.branch || "europark");
-                        }}
-                        className="cursor-pointer whitespace-nowrap rounded-full bg-paper text-forest px-4 py-2 text-xs font-medium hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,255,0.35)] transition-all duration-300 active:scale-95"
-                      >
-                        {t.filmBook} →
-                      </button>
-                    </Magnetic>
+                    {target && (
+                      <Magnetic>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onBook(target.id);
+                          }}
+                          className="cursor-pointer whitespace-nowrap rounded-full bg-paper text-forest px-4 py-2 text-xs font-medium hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,255,0.35)] transition-all duration-300 active:scale-95"
+                        >
+                          {target.bookAt[lang]} →
+                        </button>
+                      </Magnetic>
+                    )}
                   </div>
                 </div>
               </article>
@@ -225,7 +232,7 @@ export default function Reels({
             <button
               onClick={() => scrollBy(-380)}
               className="group cursor-pointer flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/20 hover:border-paper bg-white/[0.04] hover:bg-paper text-paper hover:text-[#08100a] backdrop-blur-md transition-all duration-300 shadow-sm active:scale-95"
-              aria-label="Předchozí video"
+              aria-label={t.prevVideo}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -237,7 +244,7 @@ export default function Reels({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15m0 0l6-6m-6 6l6 6" />
               </svg>
               <span className="font-mono text-[11px] sm:text-xs uppercase tracking-widest font-medium">
-                {lang === "cs" ? "Předchozí" : "Previous"}
+                {t.prev}
               </span>
             </button>
           </Magnetic>
@@ -245,11 +252,11 @@ export default function Reels({
           {/* Center: Slide Counter & Minimalist Dash Rails */}
           <div className="flex items-center gap-4 sm:gap-6">
             <span className="font-mono text-xs sm:text-sm text-paper/40 tracking-widest">
-              {pad(active + 1)} <span className="text-paper/20">/</span> {pad(REELS.length)}
+              {pad(active + 1)} <span className="text-paper/20">/</span> {pad(reels.length)}
             </span>
 
             <div className="hidden sm:flex items-center gap-2">
-              {REELS.map((_, idx) => (
+              {reels.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => {
@@ -262,7 +269,7 @@ export default function Reels({
                   className={`h-1 rounded-full transition-all duration-500 cursor-pointer ${
                     idx === active ? "w-8 sm:w-10 bg-paper shadow-[0_0_10px_rgba(244,239,230,0.5)]" : "w-2 sm:w-2.5 bg-paper/20 hover:bg-paper/50"
                   }`}
-                  aria-label={`Přejít na video ${idx + 1}`}
+                  aria-label={t.goToVideo.replace("{n}", String(idx + 1))}
                 />
               ))}
             </div>
@@ -273,10 +280,10 @@ export default function Reels({
             <button
               onClick={() => scrollBy(380)}
               className="group cursor-pointer flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/20 hover:border-paper bg-white/[0.04] hover:bg-paper text-paper hover:text-[#08100a] backdrop-blur-md transition-all duration-300 shadow-sm active:scale-95"
-              aria-label="Další video"
+              aria-label={t.nextVideo}
             >
               <span className="font-mono text-[11px] sm:text-xs uppercase tracking-widest font-medium">
-                {lang === "cs" ? "Další" : "Next"}
+                {t.next}
               </span>
               <svg
                 viewBox="0 0 24 24"

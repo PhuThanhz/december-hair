@@ -2,23 +2,16 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { BRANCHES, SERVICES, SOCIAL, type Dict, type Lang } from "@/app/data";
+import type { Dict, Lang } from "@/content/types";
+import { useContent } from "@/content/ContentProvider";
+import { openState } from "@/lib/hours";
+import { czk } from "@/lib/format";
 import { gsap, useGSAP, getLenis } from "@/lib/gsap";
 import { isNavigating, scrollToSection, JUMP_EVENT, type SectionJump } from "@/lib/scroll";
 import Magnetic from "./Magnetic";
 
 // The sections reachable from the bar, top to bottom
 const SECTIONS = ["sluzby", "cenik", "salon", "poukazy", "pobocky"] as const;
-
-const fromPrice = Math.min(...SERVICES.map((s) => Number(s.price.replace(/\s/g, ""))));
-
-/** "09:00 – 20:00" → is it open right now in Prague, and the next relevant time. */
-function openState(hours: string) {
-  const [from, to] = hours.split(/\s*[–-]\s*/);
-  const now = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
-  const open = now >= from && now < to;
-  return { open, time: open ? to : from };
-}
 
 function LangSwitch({ lang, setLang, dark = false }: { lang: Lang; setLang: (l: Lang) => void; dark?: boolean }) {
   return (
@@ -52,6 +45,8 @@ export default function Header({
   setLang: (l: Lang) => void;
   onBook: () => void;
 }) {
+  const { branches, services, social } = useContent();
+  const fromPrice = services.length ? czk(Math.min(...services.map((s) => s.price))) : "";
   const bar = useRef<HTMLElement | null>(null);
   const menu = useRef<HTMLDivElement | null>(null);
   const tl = useRef<gsap.core.Timeline | null>(null);
@@ -67,7 +62,7 @@ export default function Header({
     { href: "#poukazy", label: t.navVouchers },
     { href: "#pobocky", label: t.navBranches },
   ];
-  const hint = (href: string) => (t.menuHint[href.slice(1)] ?? "").replace("{price}", String(fromPrice));
+  const hint = (href: string) => (t.menuHint[href.slice(1)] ?? "").replace("{price}", fromPrice);
 
   // The section on screen right now, lit in the bar
   const [current, setCurrent] = useState<string | null>(null);
@@ -263,7 +258,7 @@ export default function Header({
             </Magnetic>
             <button
               onClick={() => {
-                setStatus(Object.fromEntries(BRANCHES.map((b) => [b.id, openState(b.hours)])));
+                setStatus(Object.fromEntries(branches.map((b) => [b.id, openState(b)])));
                 setOpen(true);
               }}
               aria-expanded={open}
@@ -344,12 +339,12 @@ export default function Header({
             <div className="col-span-12 lg:col-span-4 lg:col-start-9 self-center">
               <p data-menu-fade className="label text-sage mb-4">{t.menuContact}</p>
               <ul className="divide-y divide-paper/10 border-y border-paper/10">
-                {BRANCHES.map((b) => {
+                {branches.map((b) => {
                   const st = status[b.id];
                   return (
                     <li key={b.id} data-menu-fade className="py-4">
                       <div className="flex items-baseline justify-between gap-4">
-                        <span className="font-serif text-2xl">{b.city}</span>
+                        <span className="font-serif text-2xl">{b.city[lang]}</span>
                         {st && (
                           <span className={`flex items-center gap-2 text-xs ${st.open ? "text-sage" : "text-paper/50"}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${st.open ? "bg-sage" : "bg-paper/30"}`} />
@@ -382,10 +377,10 @@ export default function Header({
 
           <div data-menu-fade className="flex items-center justify-between gap-6 border-t border-paper/10 py-6 text-sm">
             <div className="flex items-center gap-6">
-              <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer" className="link-line">
+              <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="link-line">
                 Instagram ↗
               </a>
-              <a href={SOCIAL.facebook} target="_blank" rel="noopener noreferrer" className="link-line">
+              <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="link-line">
                 Facebook ↗
               </a>
             </div>

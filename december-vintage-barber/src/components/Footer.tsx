@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import Image from "next/image";
-import { SOCIAL, type Dict } from "@/app/data";
+import type { Dict } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, MQ_MOTION } from "@/lib/gsap";
 import Magnetic from "./Magnetic";
 
@@ -33,7 +34,13 @@ function FacebookIcon({ className = "" }: { className?: string }) {
   );
 }
 
+/** The account name at the end of a profile URL: instagram.com/december.hair → december.hair */
+const handle = (url: string) => url.replace(/\/+$/, "").split("/").pop() ?? "";
+
 export default function Footer({ t }: { t: Dict }) {
+  const { social, branches } = useContent();
+  const lang = useLang();
+  const ig = `@${handle(social.instagram)}`;
   const root = useRef<HTMLElement | null>(null);
 
   useGSAP(
@@ -76,11 +83,11 @@ export default function Footer({ t }: { t: Dict }) {
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b border-paper/10">
             <div className="max-w-xl">
               <h2 className="font-serif text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.05] tracking-[-0.02em] text-paper">
-                Sledujte naši tvorbu{" "}
-                <span className="font-serif italic text-sage font-normal">na Instagramu i Facebooku</span>
+                {t.socialTitle[0]}{" "}
+                <span className="font-serif italic text-sage font-normal">{t.socialTitle[1]}</span>
               </h2>
               <p className="mt-3 text-paper/70 text-sm sm:text-base font-light leading-relaxed">
-                Nové střihy, barvy a proměny každý týden ze salonů Praha, Kladno a Mladá Boleslav.
+                {t.socialBody}
               </p>
             </div>
 
@@ -95,25 +102,25 @@ export default function Footer({ t }: { t: Dict }) {
                 </div>
                 <div className="pr-1">
                   <a
-                    href={SOCIAL.instagram}
+                    href={social.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-serif italic text-base sm:text-lg text-paper hover:text-sage transition-colors block leading-tight"
                   >
-                    @december.hair
+                    {ig}
                   </a>
                   <span className="text-[10px] sm:text-[11px] text-paper/60 font-mono block">
                     18.4K · Instagram
                   </span>
                 </div>
                 <a
-                  href={SOCIAL.instagram}
+                  href={social.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full bg-paper text-forest px-3.5 py-1.5 text-xs font-medium hover:bg-sage transition-all shadow-sm shrink-0 ml-auto"
                 >
                   <InstagramIcon className="w-3.5 h-3.5" />
-                  Sledovat ↗
+                  {t.follow} ↗
                 </a>
               </div>
 
@@ -126,7 +133,7 @@ export default function Footer({ t }: { t: Dict }) {
                 </div>
                 <div className="pr-1">
                   <a
-                    href={SOCIAL.facebook}
+                    href={social.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-serif italic text-base sm:text-lg text-paper hover:text-sage transition-colors block leading-tight"
@@ -134,17 +141,17 @@ export default function Footer({ t }: { t: Dict }) {
                     December Hair
                   </a>
                   <span className="text-[10px] sm:text-[11px] text-paper/60 font-mono block">
-                    Oficiální Facebook
+                    {t.fbOfficial}
                   </span>
                 </div>
                 <a
-                  href={SOCIAL.facebook}
+                  href={social.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-full bg-paper text-forest px-3.5 py-1.5 text-xs font-medium hover:bg-sage transition-all shadow-sm shrink-0 ml-auto"
                 >
                   <FacebookIcon className="w-3.5 h-3.5" />
-                  Sledovat ↗
+                  {t.follow} ↗
                 </a>
               </div>
             </div>
@@ -155,12 +162,12 @@ export default function Footer({ t }: { t: Dict }) {
             {FEED_ITEMS.map((item) => (
               <a
                 key={item.src}
-                href={SOCIAL.instagram}
+                href={social.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-feed
                 className="group relative aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-3xl bg-forest-2 border border-paper/10 shadow-lg select-none"
-                aria-label={`Instagram @december.hair - ${item.tag}`}
+                aria-label={`Instagram ${ig} - ${item.tag}`}
               >
                 <Image
                   src={item.src}
@@ -186,7 +193,7 @@ export default function Footer({ t }: { t: Dict }) {
                       <span>{item.likes}</span>
                     </div>
                     <p className="text-[11px] text-paper/80 mt-0.5 font-serif italic truncate">
-                      @december.hair
+                      {ig}
                     </p>
                   </div>
                 </div>
@@ -206,9 +213,9 @@ export default function Footer({ t }: { t: Dict }) {
             <a href="#pobocky" className="hover:text-paper">{t.navBranches}</a>
           </nav>
           <div className="col-span-6 md:col-span-3 flex flex-col gap-2 text-paper/70">
-            <span>Praha</span>
-            <span>Kladno</span>
-            <span>Mladá Boleslav</span>
+            {branches.map((b) => (
+              <span key={b.id}>{b.city[lang]}</span>
+            ))}
           </div>
         </div>
 
@@ -230,11 +237,11 @@ export default function Footer({ t }: { t: Dict }) {
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-paper/15 py-6 text-xs text-paper/50">
           <span>© 2026 December Hair. {t.footerRights}</span>
           <div className="flex items-center gap-5">
-            <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-paper">
-              <InstagramIcon className="w-4 h-4" /> @december.hair
+            <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-paper">
+              <InstagramIcon className="w-4 h-4" /> {ig}
             </a>
-            <a href={SOCIAL.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-paper">
-              <FacebookIcon className="w-4 h-4" /> decemberczech
+            <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-paper">
+              <FacebookIcon className="w-4 h-4" /> {handle(social.facebook)}
             </a>
           </div>
         </div>

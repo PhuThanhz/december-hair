@@ -2,26 +2,20 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import type { Category, Dict } from "@/app/data";
+import type { Category, Dict } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
-
-// Who we look after, one mirror each. Prices live in the price list below, so this is about people.
-// `focus` keeps the head and face inside the frame when a mirror is narrow.
-const PEOPLE: { id: string; image: string; focus: string; book?: Category }[] = [
-  { id: "women", image: "/images/showcase-balayage-curls.png", focus: "50% 30%", book: "women" },
-  { id: "men", image: "/images/barber-scissor-cut.webp", focus: "100% 40%", book: "men" },
-  { id: "seniors", image: "/images/men-classic-fade.jpg", focus: "55% 25%" },
-  { id: "kids", image: "/images/haircut-kid-fade.png", focus: "34% 35%", book: "kids" },
-  { id: "care", image: "/images/service-hair-wash-massage.png", focus: "32% 40%", book: "spa" },
-];
 
 /**
  * "Mirrors for the whole family": everyone we cut for on one screen, like the mirrors along
  * a salon wall. Pointing at one opens it to the person it's for. No pinned or sideways scrolling.
  */
 export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category) => void }) {
+  // Who we look after, one mirror each. Prices live in the price list below, so this is about people.
+  const { panels } = useContent();
+  const lang = useLang();
   const root = useRef<HTMLElement | null>(null);
-  const [open, setOpen] = useState(PEOPLE[0].id);
+  const [open, setOpen] = useState(panels[0]?.id);
 
   useGSAP(
     () => {
@@ -63,9 +57,9 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
         </h2>
 
         <div data-mirrors className="mt-10 md:mt-8 flex-1 min-h-0 flex flex-col md:flex-row gap-2">
-          {PEOPLE.map((p) => {
+          {panels.map((p) => {
             const on = open === p.id;
-            const copy = t.people[p.id];
+            const copy = { name: p.name[lang], line: p.line[lang], tags: p.tags[lang] };
             return (
               <div
                 key={p.id}
@@ -120,7 +114,7 @@ export default function Services({ t, onBook }: { t: Dict; onBook: (c?: Category
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onBook(p.book);
+                      onBook(p.bookingCategory);
                     }}
                     className="mt-7 cursor-pointer rounded-full bg-paper text-forest px-6 py-3 text-sm font-medium hover:bg-sage transition-colors"
                   >

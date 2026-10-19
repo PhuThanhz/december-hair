@@ -1,50 +1,46 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SERVICES, type Category, type Dict, type Lang, type Service } from "@/app/data";
+import { CATEGORIES, type Category, type Dict, type Lang, type Service } from "@/content/types";
+import { useContent } from "@/content/ContentProvider";
+import { czk as fmt, mins } from "@/lib/format";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 
-const ORDER: Category[] = ["women", "men", "kids", "spa"];
-const amount = (price: string) => Number(price.replace(/\s/g, ""));
-const minutes = (d: string) => Number(d.replace(/\D/g, "")) || 0;
-// Manual grouping: toLocaleString differs between Node and browsers and breaks hydration
-const fmt = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
 
 /**
  * "Build your visit": tick the services you want and a receipt prints beside
  * the list with the total price and time in the chair, ready to book.
- * Driven entirely by `services`, so the back office can add or change rows freely.
+ * Driven entirely by the services in the content, so the back office can add or change rows freely.
  */
 export default function PriceList({
   t,
   lang,
   onBook,
-  services = SERVICES,
 }: {
   t: Dict;
   lang: Lang;
   onBook: (c: Category, note: string) => void;
-  /** Later this comes from the CMS / API; same shape as SERVICES. */
-  services?: Service[];
 }) {
+  const { services } = useContent();
   const root = useRef<HTMLElement | null>(null);
   const totalEl = useRef<HTMLSpanElement | null>(null);
   const shown = useRef(0);
-  const [picked, setPicked] = useState<string[]>([services[0].cs]);
+  // Start with the first service ticked, so the receipt shows how it works
+  const [picked, setPicked] = useState<string[]>(services.length ? [services[0].id] : []);
   const [inView, setInView] = useState(false);
 
-  const chosen = services.filter((s) => picked.includes(s.cs));
-  const total = chosen.reduce((sum, s) => sum + amount(s.price), 0);
-  const time = chosen.reduce((sum, s) => sum + minutes(s.duration), 0);
-  const fromPrice = chosen.some((s) => s.from);
-  const groups = ORDER.map((c) => ({ cat: c, items: services.filter((s) => s.category === c) })).filter((g) => g.items.length);
-  const name = (s: Service) => (lang === "cs" ? s.cs : s.en);
+  const chosen = services.filter((s) => picked.includes(s.id));
+  const total = chosen.reduce((sum, s) => sum + s.price, 0);
+  const time = chosen.reduce((sum, s) => sum + s.durationMin, 0);
+  const fromPrice = chosen.some((s) => s.priceFrom);
+  const groups = CATEGORIES.map((c) => ({ cat: c, items: services.filter((s) => s.category === c) })).filter((g) => g.items.length);
+  const name = (s: Service) => s.name[lang];
 
-  const toggle = (cs: string) => setPicked((p) => (p.includes(cs) ? p.filter((x) => x !== cs) : [...p, cs]));
+  const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const bookSelection = () => {
     if (!chosen.length) return;
-    onBook(chosen[0].category, `${lang === "cs" ? "Služby" : "Services"}: ${chosen.map(name).join(", ")}`);
+    onBook(chosen[0].category, `${t.servicesLabel}: ${chosen.map(name).join(", ")}`);
   };
 
   useGSAP(
@@ -128,11 +124,11 @@ export default function PriceList({
                 </div>
                 <ul>
                   {g.items.map((s) => {
-                    const on = picked.includes(s.cs);
+                    const on = picked.includes(s.id);
                     return (
-                      <li key={s.cs} data-row className="border-b border-ink/10">
+                      <li key={s.id} data-row className="border-b border-ink/10">
                         <button
-                          onClick={() => toggle(s.cs)}
+                          onClick={() => toggle(s.id)}
                           aria-pressed={on}
                           className={`group w-full text-left cursor-pointer px-3 sm:px-4 py-5 grid grid-cols-[auto_1fr] gap-x-4 sm:gap-x-5 transition-colors duration-300 ${
                             on ? "bg-celadon/45" : "hover:bg-bone/50"
@@ -157,13 +153,13 @@ export default function PriceList({
                               </span>
                               <span className="leader" aria-hidden />
                               <span className="price text-lg sm:text-xl">
-                                {s.from && <span className="text-xs font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
-                                {s.price} Kč
+                                {s.priceFrom && <span className="text-xs font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
+                                {fmt(s.price)} Kč
                               </span>
                             </span>
                             <span className="mt-1.5 flex justify-between gap-4 text-sm text-ink-soft">
-                              <span>{lang === "cs" ? s.noteCs : s.noteEn}</span>
-                              <span className="tabular-nums whitespace-nowrap">{s.duration}</span>
+                              <span>{s.note[lang]}</span>
+                              <span className="tabular-nums whitespace-nowrap">{mins(s.durationMin)}</span>
                             </span>
                           </span>
                         </button>
@@ -186,19 +182,19 @@ export default function PriceList({
               <ul className="min-h-[120px]">
                 {chosen.length === 0 && <li className="py-10 text-center text-sm text-ink-soft">{t.receiptEmpty}</li>}
                 {chosen.map((s) => (
-                  <li key={s.cs} className="receipt-line group py-4 border-b border-dashed border-ink/15">
+                  <li key={s.id} className="receipt-line group py-4 border-b border-dashed border-ink/15">
                     <div className="flex items-baseline gap-3">
                       <span className="font-serif text-lg leading-snug">{name(s)}</span>
                       <span className="leader" aria-hidden />
                       <span className="price">
-                        {s.from && <span className="text-[11px] font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
-                        {s.price} Kč
+                        {s.priceFrom && <span className="text-[11px] font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
+                        {fmt(s.price)} Kč
                       </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-xs text-ink-soft">
-                      <span className="tabular-nums">{s.duration}</span>
+                      <span className="tabular-nums">{mins(s.durationMin)}</span>
                       <button
-                        onClick={() => toggle(s.cs)}
+                        onClick={() => toggle(s.id)}
                         aria-label={`${t.receiptClear} ${name(s)}`}
                         className="cursor-pointer px-1 opacity-60 hover:opacity-100 hover:text-ink transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-60"
                       >

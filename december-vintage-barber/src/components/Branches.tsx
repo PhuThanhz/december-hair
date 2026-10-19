@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { BRANCHES, directionsUrl, type Dict } from "@/app/data";
+import type { Dict } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
+import { directionsUrl, findBranch } from "@/content/helpers";
+import { hoursSummary } from "@/lib/hours";
 import { gsap, useGSAP, EASE, MQ_MOTION, ScrollTrigger, getLenis } from "@/lib/gsap";
 import { useInView } from "@/lib/useInView";
 
@@ -12,7 +15,7 @@ import FastMarquee from "react-fast-marquee";
 const loadMap = () => import("./BranchMap");
 const BranchMap = dynamic(loadMap, { ssr: false });
 
-function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void }) {
+function MarqueeBanner({ text, tagline, cities, onClick }: { text: string; tagline: string; cities: string; onClick: () => void }) {
   const box = useRef<HTMLDivElement | null>(null);
   const inView = useInView(box);
   return (
@@ -44,15 +47,15 @@ function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void })
           </span>
           <span className="text-sage/60 text-[10px] sm:text-xs">✦</span>
           <span className="font-mono text-[10px] sm:text-[11px] text-paper/70 tracking-[0.22em] uppercase">
-            Praha · Kladno · Mladá Boleslav
+            {cities}
           </span>
           <span className="text-sage/60 text-[10px] sm:text-xs">✦</span>
           <span className="font-serif italic text-base sm:text-lg lg:text-xl text-paper/85">
-            Kadeřnictví pro ženy, muže i děti
+            {tagline}
           </span>
           <span className="text-sage/60 text-[10px] sm:text-xs">✦</span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-paper/10 text-[11px] font-sans tracking-wide text-sage border border-sage/25 group-hover:bg-paper group-hover:text-forest transition-all duration-300">
-            Rezervovat termín →
+            {text} →
           </span>
           <span className="text-sage/60 text-[10px] sm:text-xs">✦</span>
         </div>
@@ -62,9 +65,11 @@ function MarqueeBanner({ text, onClick }: { text: string; onClick: () => void })
 }
 
 export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: string) => void }) {
+  const { branches } = useContent();
+  const lang = useLang();
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<string | null>(null);
-  const activeBranch = BRANCHES.find((b) => b.id === active);
+  const activeBranch = findBranch(branches, active);
   const mapBox = useRef<HTMLDivElement | null>(null);
   const [mapNear, setMapNear] = useState(false);
   // Card and pin light up together, whichever one the pointer is on
@@ -85,10 +90,10 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
         if (!e.isIntersecting) return;
         io.disconnect();
         const step = 900;
-        BRANCHES.forEach((b, i) =>
+        branches.forEach((b, i) =>
           timers.push(window.setTimeout(() => !touched.current && setHover(b.id), 1200 + i * step))
         );
-        timers.push(window.setTimeout(() => !touched.current && setHover(null), 1200 + BRANCHES.length * step));
+        timers.push(window.setTimeout(() => !touched.current && setHover(null), 1200 + branches.length * step));
       },
       { threshold: 0.5 }
     );
@@ -97,7 +102,7 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
       io.disconnect();
       timers.forEach(clearTimeout);
     };
-  }, []);
+  }, [branches]);
 
   // Only a moving pointer counts as the visitor's own hover (cards also slide under a resting one while scrolling)
   const hoverBy = (id: string | null) => {
@@ -200,11 +205,11 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                     onSelect={setActive}
                     hover={hover}
                     onHover={hoverBy}
-                    labels={{ map: t.mapStreet, aerial: t.mapAerial }}
+                    labels={{ map: t.mapStreet, aerial: t.mapAerial, aria: t.mapAria }}
                   />
                 )}
                 <p className="pointer-events-none absolute left-4 top-4 label text-ink-soft bg-paper/85 px-3 py-1.5 rounded-full">
-                  {active ? BRANCHES.find((b) => b.id === active)?.mall : t.mapHint}
+                  {activeBranch ? activeBranch.mall : t.mapHint}
                 </p>
                 {activeBranch && (
                   <a
@@ -225,7 +230,7 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
 
             {/* List */}
             <ul ref={list} data-branch-list className="col-span-12 lg:col-span-5 lg:order-1 border-t border-ink/80">
-              {BRANCHES.map((b) => {
+              {branches.map((b) => {
                 const on = active === b.id;
                 const lit = hover === b.id && !on;
                 return (
@@ -260,10 +265,12 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
                               on ? "text-paper" : lit ? "text-moss" : ""
                             }`}
                           >
-                            {b.city}
+                            {b.city[lang]}
                           </span>
                         </span>
-                        <span className={`label tabular-nums ${on ? "text-sage" : "text-ink-soft"}`}>{b.hours}</span>
+                        <span className={`label tabular-nums ${on ? "text-sage" : "text-ink-soft"}`}>
+                          {hoursSummary(b, t.aboutDays, t.closed)}
+                        </span>
                       </span>
                       {/* The address sits in a tile with an arrow: it reads as pressable before any hover */}
                       <span
@@ -345,7 +352,12 @@ export default function Branches({ t, onBook }: { t: Dict; onBook: (branchId?: s
         </div>
       </section>
 
-      <MarqueeBanner text={t.marquee} onClick={() => onBook()} />
+      <MarqueeBanner
+        text={t.marquee}
+        tagline={t.marqueeTagline}
+        cities={branches.map((b) => b.city[lang]).join(" · ")}
+        onClick={() => onBook()}
+      />
     </>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BRANCHES, type Category, type Dict } from "@/app/data";
+import { CATEGORIES, type Category, type Dict } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
 import { getLenis } from "@/lib/gsap";
 
 const field =
@@ -29,6 +30,8 @@ export default function BookingModal({
   note: string;
   setNote: (n: string) => void;
 }) {
+  const { branches } = useContent();
+  const lang = useLang();
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -83,9 +86,9 @@ export default function BookingModal({
               <label className="block">
                 <span className="label text-ink-soft">{t.formBranch}</span>
                 <select value={branch} onChange={(e) => setBranch(e.target.value)} className={field}>
-                  {BRANCHES.map((b) => (
+                  {branches.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.city} — {b.mall}
+                      {b.city[lang]} — {b.mall}
                     </option>
                   ))}
                 </select>
@@ -98,7 +101,7 @@ export default function BookingModal({
                   onChange={(e) => setCategory(e.target.value as Category)}
                   className={field}
                 >
-                  {(Object.keys(t.cat) as Category[]).map((c) => (
+                  {CATEGORIES.map((c) => (
                     <option key={c} value={c}>
                       {t.cat[c]}
                     </option>

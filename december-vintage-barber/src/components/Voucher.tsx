@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pinyon_Script } from "next/font/google";
-import { SERVICES, type Dict, type Lang } from "@/app/data";
+import type { Dict, Lang, Service } from "@/content/types";
+import { useContent } from "@/content/ContentProvider";
+import { plural } from "@/lib/text";
 import { gsap, useGSAP, EASE, MQ_MOTION, getLenis } from "@/lib/gsap";
 import Magnetic from "./Magnetic";
 
@@ -13,30 +15,31 @@ const script = Pinyon_Script({
   display: "swap",
 });
 
-const VALUES = [1000, 3000] as const;
-type Value = (typeof VALUES)[number];
+type Value = number;
 const money = (n: number) => n.toLocaleString("cs-CZ");
-const num = (s: string) => Number(s.replace(/\D/g, ""));
 
-type Treat = { items: typeof SERVICES; total: number; minutes: number };
+// The ticket grid follows the number of values (literal classes, so Tailwind keeps them)
+const COLS: Record<number, string> = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-3" };
+
+type Treat = { items: Service[]; total: number; minutes: number };
 
 /** Every visit the voucher pays for in full and that uses most of it: one or two services from the
  *  price list. Two only go together if one person would book both: same kind of visit, or any visit
  *  plus care. Each scratch reveals one of these, so covering it again turns up a different treat. */
-function treatsFor(value: number): Treat[] {
+function treatsFor(value: number, services: Service[]): Treat[] {
   const out: Treat[] = [];
-  const add = (items: typeof SERVICES) => {
-    const total = items.reduce((a, s) => a + num(s.price), 0);
+  const add = (items: Service[]) => {
+    const total = items.reduce((a, s) => a + s.price, 0);
     if (total <= value && total >= value * 0.6)
       out.push({
         items,
         total,
-        minutes: items.reduce((a, s) => a + num(s.duration), 0),
+        minutes: items.reduce((a, s) => a + s.durationMin, 0),
       });
   };
-  SERVICES.forEach((a, i) => {
+  services.forEach((a, i) => {
     add([a]);
-    SERVICES.slice(i + 1).forEach((b) => {
+    services.slice(i + 1).forEach((b) => {
       if (
         a.category === b.category ||
         a.category === "spa" ||
@@ -47,10 +50,6 @@ function treatsFor(value: number): Treat[] {
   });
   return out.sort((a, b) => b.total - a.total);
 }
-
-/** Czech-style plural: 1 / 2–4 / 5+ */
-const plural = (n: number, [one, few, many]: string[]) =>
-  n === 1 ? one : n >= 2 && n <= 4 ? few : many;
 
 // A coin for a cursor, so a mouse knows it can scratch
 const COIN = `url("data:image/svg+xml,${encodeURIComponent(
@@ -173,7 +172,8 @@ function ScratchCard({
   const sparks = useRef<HTMLDivElement | null>(null);
   const [started, setStarted] = useState(false);
   const done = useRef(false);
-  const treats = treatsFor(value);
+  const { services } = useContent();
+  const treats = treatsFor(value, services);
   // Which treat is under the foil: the fullest one first, then a different one on every new cover
   const [pick, setPick] = useState(0);
   const treat = treats[Math.min(pick, treats.length - 1)];
@@ -396,9 +396,9 @@ function ScratchCard({
             <p className="label text-ink-soft text-[max(10px,2.3cqw)]">{t.vWhat}</p>
             <p className="mt-[1.6cqw] font-serif leading-[1.02] tracking-[-0.02em] text-[7.4cqw] text-forest">
               {treat?.items.map((s, i) => (
-                <span key={s.cs} className="block">
+                <span key={s.id} className="block">
                   {i > 0 && <span className="text-moss">+ </span>}
-                  {lang === "cs" ? s.cs : s.en}
+                  {s.name[lang]}
                 </span>
               ))}
             </p>
@@ -474,8 +474,9 @@ export default function Voucher({
   lang: Lang;
   onBook: (note: string) => void;
 }) {
+  const { services, voucher } = useContent();
   const root = useRef<HTMLElement | null>(null);
-  const [value, setValue] = useState<Value>(3000);
+  const [value, setValue] = useState<Value>(voucher.defaultAmount);
   const [revealed, setRevealed] = useState(false);
   const onReveal = useCallback(() => setRevealed(true), []);
   const onCover = useCallback(() => setRevealed(false), []);
@@ -607,12 +608,12 @@ export default function Voucher({
             data-v-fade
             role="radiogroup"
             aria-label={t.vPick}
-            className="mt-9 grid grid-cols-2 gap-3 max-w-md"
+            className={`mt-9 grid ${COLS[voucher.options.length] ?? "grid-cols-3"} gap-3 max-w-md`}
           >
-            {VALUES.map((v) => {
+            {voucher.options.map((v) => {
               const on = v === value;
-              const n = treatsFor(v).length;
-              const ex = `${n} ${plural(n, t.vOptions)} ${t.vOptionsTail}`;
+              const n = treatsFor(v, services).length;
+              const ex = `${n} ${plural(lang, n, t.vOptions)} ${t.vOptionsTail}`;
               return (
                 <button
                   key={v}

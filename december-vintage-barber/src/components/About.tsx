@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { BRANCHES, SERVICES, type Category, type Dict } from "@/app/data";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Category, Dict, Service } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
+import { daysOpen, latestClose, pragueNow } from "@/lib/hours";
+import { czk, mins } from "@/lib/format";
 import { gsap, useGSAP, ScrollTrigger, EASE, MQ_MOTION } from "@/lib/gsap";
 import { scrollToSection } from "@/lib/scroll";
 import { playWhileVisible } from "@/lib/video";
@@ -9,35 +12,26 @@ import { playWhileVisible } from "@/lib/video";
 const CLIPS = ["cut", "colour", "care"] as const;
 type Clip = (typeof CLIPS)[number];
 
-// Which services each clip stands for (Service.cs), and where booking it starts
+// Which services each clip stands for (Service.id), and where booking it starts
 const CLIP_SERVICES: Record<Clip, { services: string[]; category?: Category }> = {
-  cut: { services: ["Dětský střih", "Pánský střih", "Fade a úprava vousů", "Střih a foukaná"] },
-  colour: { services: ["Barvení a melír", "Balayage"], category: "women" },
-  care: { services: ["Mytí a masáž hlavy", "Head spa"], category: "spa" },
+  cut: { services: ["kids-cut", "mens-cut", "fade-beard", "cut-blowdry"] },
+  colour: { services: ["colour-highlights", "balayage"], category: "women" },
+  care: { services: ["wash-massage", "head-spa"], category: "spa" },
 };
 
-const num = (s: string) => Number(s.replace(/\D/g, ""));
-
-// "od 390 Kč · 30–60 min" for each clip, straight from the price list
-const CLIP_FACTS = Object.fromEntries(
-  CLIPS.map((c) => {
-    const list = SERVICES.filter((s) => CLIP_SERVICES[c].services.includes(s.cs));
-    const cheapest = list.reduce((a, b) => (num(b.price) < num(a.price) ? b : a));
-    const mins = list.map((s) => num(s.duration));
-    const lo = Math.min(...mins);
-    const hi = Math.max(...mins);
-    return [c, { from: cheapest.price, time: lo === hi ? `${lo} min` : `${lo}–${hi} min` }];
-  })
-) as Record<Clip, { from: string; time: string }>;
-
-// Latest closing time across the salons, e.g. "09:00 – 20:00" → 20:00
-const CLOSE = BRANCHES.map((b) => b.hours.split(/\s*[–-]\s*/)[1]).sort().reverse()[0];
-
-/** Today's weekday in Prague (0 = Monday), whatever the visitor's own timezone. */
-const pragueDay = () =>
-  ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(
-    new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Prague", weekday: "short" }).format(new Date())
-  );
+/** "od 390 Kč · 30–60 min" for each clip, straight from the price list; null when none of its services is listed */
+function clipFacts(services: Service[]) {
+  return Object.fromEntries(
+    CLIPS.map((c) => {
+      const list = services.filter((s) => CLIP_SERVICES[c].services.includes(s.id));
+      if (!list.length) return [c, null];
+      const cheapest = list.reduce((a, b) => (b.price < a.price ? b : a));
+      const lo = Math.min(...list.map((s) => s.durationMin));
+      const hi = Math.max(...list.map((s) => s.durationMin));
+      return [c, { from: czk(cheapest.price), time: lo === hi ? mins(lo) : `${lo}–${hi} min` }];
+    })
+  ) as Record<Clip, { from: string; time: string } | null>;
+}
 
 /**
  * "Three salons, one team", then the three things we do as huge words. The word crossing the
@@ -49,6 +43,12 @@ const pragueDay = () =>
  * paper-coloured layer is "multiply"-blended so the white matches the page.
  */
 export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, note?: string) => void }) {
+  const { branches, services, siteMedia } = useContent();
+  const lang = useLang();
+  const facts = useMemo(() => clipFacts(services), [services]);
+  // Latest closing time across the salons, and on how many weekdays one of them is open
+  const close = latestClose(branches);
+  const days = daysOpen(branches);
   const root = useRef<HTMLElement | null>(null);
   const [active, setActive] = useState<Clip>("cut");
 
@@ -79,7 +79,7 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
   useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
 
   useEffect(() => {
-    const tick = () => setToday(pragueDay());
+    const tick = () => setToday(pragueNow().weekday);
     const first = window.setTimeout(tick, 0);
     const id = window.setInterval(tick, 60_000);
     return () => {
@@ -145,9 +145,11 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
       <div className="min-w-0">
         <p className="label text-ink-soft tabular-nums">0{CLIPS.indexOf(active) + 1} / 03</p>
         <p className="mt-1 font-serif italic text-3xl leading-none text-forest">{t.aboutClips[active]}</p>
-        <p className="mt-2 text-sm text-ink-soft whitespace-nowrap">
-          {t.servicesFrom} <span className="price text-ink">{CLIP_FACTS[active].from} Kč</span> · {CLIP_FACTS[active].time}
-        </p>
+        {facts[active] && (
+          <p className="mt-2 text-sm text-ink-soft whitespace-nowrap">
+            {t.servicesFrom} <span className="price text-ink">{facts[active].from} Kč</span> · {facts[active].time}
+          </p>
+        )}
       </div>
       <button
         onClick={() => onBook(CLIP_SERVICES[active].category, t.aboutClips[active])}
@@ -191,8 +193,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                     <video
                       key={c}
                       data-frame={c}
-                      src={`/videos/about-${c}.mp4`}
-                      data-poster={`/videos/about-${c}.jpg`}
+                      src={siteMedia.aboutClips[c].src}
+                      data-poster={siteMedia.aboutClips[c].poster}
                       data-hold={c !== active || undefined}
                       muted
                       loop
@@ -226,8 +228,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
                 >
                   <video
                     data-intext={c}
-                    src={`/videos/about-${c}.mp4`}
-                    data-poster={`/videos/about-${c}.jpg`}
+                    src={siteMedia.aboutClips[c].src}
+                    data-poster={siteMedia.aboutClips[c].poster}
                     data-hold={!on || undefined}
                     muted
                     loop
@@ -271,18 +273,18 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
         <dl className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-8">
           <div data-about-fade className="border-t border-ink/15 pt-5">
             <dt className="flex items-baseline gap-3">
-              <span data-count="3" className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">3</span>
-              <span className="text-ink-soft">{t.aboutFacts[0].l}</span>
+              <span data-count={branches.length} className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">{branches.length}</span>
+              <span className="text-ink-soft">{t.aboutFacts[0]}</span>
             </dt>
             <dd className="mt-4 flex flex-wrap gap-2">
-              {BRANCHES.map((b) => (
+              {branches.map((b) => (
                 <a
                   key={b.id}
                   href="#pobocky"
                   onClick={goBranches}
                   className="rounded-full border border-ink/20 px-3.5 py-1.5 text-sm hover:border-forest hover:bg-forest hover:text-paper transition-colors"
                 >
-                  {b.city}
+                  {b.city[lang]}
                 </a>
               ))}
             </dd>
@@ -290,8 +292,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
 
           <div data-about-fade className="border-t border-ink/15 pt-5">
             <dt className="flex items-baseline gap-3">
-              <span data-count="7" className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">7</span>
-              <span className="text-ink-soft">{t.aboutFacts[1].l}</span>
+              <span data-count={days} className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">{days}</span>
+              <span className="text-ink-soft">{t.aboutFacts[1]}</span>
             </dt>
             <dd data-days className="mt-4 grid grid-cols-7 gap-1.5 max-w-xs">
               {t.aboutDays.map((d, i) => {
@@ -308,8 +310,8 @@ export default function About({ t, onBook }: { t: Dict; onBook: (c?: Category, n
 
           <div data-about-fade className="border-t border-ink/15 pt-5">
             <dt className="flex items-baseline gap-3">
-              <span className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">{CLOSE}</span>
-              <span className="text-ink-soft">{t.aboutFacts[2].l}</span>
+              <span className="font-serif [font-variant-numeric:lining-nums] text-6xl leading-none text-forest">{close}</span>
+              <span className="text-ink-soft">{t.aboutFacts[2]}</span>
             </dt>
           </div>
         </dl>

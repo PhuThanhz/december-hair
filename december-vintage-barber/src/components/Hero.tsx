@@ -2,20 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import Image, { getImageProps } from "next/image";
-import type { Dict } from "@/app/data";
+import type { Dict, VideoSlot } from "@/content/types";
+import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, ScrollTrigger, getLenis, EASE, MQ_DESKTOP, MQ_MOTION } from "@/lib/gsap";
 import { playWhileVisible } from "@/lib/video";
 
-type Panel = { kind: "image" | "video"; src: string; poster?: string; alt: string };
-
 // Vertical 1080×1920 clips fill a third of the screen at native sharpness
-const PANELS: Panel[] = [
-  // Same clip as the right panel, pre-rotated to start 9.5 s in so the two never show the same shot
-  // (a separate file avoids a mid-file seek, which made the browser download the clip twice)
-  { kind: "video", src: "/videos/december-hair-b.mp4", poster: "/videos/december-hair-b-poster.jpg", alt: "Salon December" },
-  { kind: "video", src: "/videos/europark.mp4", poster: "/videos/europark-poster.jpg", alt: "Nový salon December v Europarku" },
-  { kind: "video", src: "/videos/december-hair.mp4", poster: "/videos/december-hair-poster.jpg", alt: "Den v salonu December" },
-];
+type Panel = { kind: "image" | "video"; src: string; poster?: string; alt: string };
 
 // Both layouts are in the HTML; at each width the hidden one's posters resolve to an empty inline GIF,
 // so the browser fetches only the posters it shows, straight from the HTML (no preload or lazy wait)
@@ -72,14 +65,12 @@ const MASK_RATIO = 2694 / 555;
  * its letters, over the clips behind it. The tint inside follows the text colour (dark on paper,
  * light over video). A CSS mask with the logo's alpha: crisp, and supported everywhere.
  */
-function Wordmark({ ready }: { ready: boolean }) {
+function Wordmark({ ready, inside }: { ready: boolean; inside: VideoSlot }) {
   const fill = useRef<HTMLSpanElement | null>(null);
   useEffect(() => (ready && fill.current ? playWhileVisible(fill.current) : undefined), [ready]);
 
-  // Pre-rendered: the centre clip's middle band, flipped upside down and in black and white, so the
-  // browser only decodes a small video (no CSS filter or transform to redo every frame)
-  const inside = { src: "/videos/europark-reflection.mp4", poster: "/videos/europark-reflection-poster.jpg" };
-
+  // `inside` is pre-rendered: the centre clip's middle band, flipped upside down and in black and white,
+  // so the browser only decodes a small video (no CSS filter or transform to redo every frame)
   return (
     <span aria-hidden className="block overflow-hidden pb-[0.04em]">
       <span data-letter className="relative block" style={{ width: "4em", aspectRatio: MASK_RATIO }}>
@@ -103,6 +94,9 @@ function Wordmark({ ready }: { ready: boolean }) {
 }
 
 export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
+  const { siteMedia } = useContent();
+  const lang = useLang();
+  const panels: Panel[] = siteMedia.heroPanels.map((p) => ({ kind: "video", src: p.src, poster: p.poster, alt: p.alt[lang] }));
   const root = useRef<HTMLElement | null>(null);
 
   // The clips wait for the loader to lift (the curtain hides them anyway), so the posters, fonts and
@@ -173,7 +167,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
       {/* Desktop: pinned triptych */}
       <div className="hidden md:block relative h-[100svh] overflow-hidden">
         <div className="absolute inset-0 grid grid-cols-3">
-          {PANELS.map((p, i) => (
+          {panels.map((p, i) => (
             <div key={i} data-panel={i} className="relative overflow-hidden">
               <div data-entry-frame={i === 1 ? "" : undefined} className="absolute inset-0">
                 <div data-panel-img className="absolute inset-0">
@@ -187,7 +181,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
 
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div data-desk-word data-ink className="text-paper font-serif leading-[0.8] tracking-[-0.045em] text-[19vw] 2xl:text-[19rem]">
-            <Wordmark ready={ready} />
+            <Wordmark ready={ready} inside={siteMedia.heroReflection} />
             <span data-hero-fade className="block text-right italic text-[4.2vw] 2xl:text-[4.2rem] leading-none tracking-normal -mt-[0.6vw] pr-[0.5vw]">
               Hair
             </span>
@@ -210,7 +204,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
         >
           {/* Background Video with multi-stop luxury dark gradient */}
           <div className="absolute inset-0 z-0">
-            <Media p={PANELS[1]} layout={PHONE} />
+            {panels[1] && <Media p={panels[1]} layout={PHONE} />}
             <div className="absolute inset-0 bg-gradient-to-b from-forest/80 via-forest/25 to-forest/90 pointer-events-none" />
             <div className="absolute inset-0 bg-black/15 pointer-events-none" />
           </div>
@@ -218,10 +212,10 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
           {/* Top meta tags */}
           <div data-hero-fade className="relative z-10 flex items-center justify-between text-xs">
             <span className="label tracking-[0.2em] text-[10px] text-sage border border-sage/35 rounded-full px-3 py-1 bg-forest/60 backdrop-blur-md">
-              Salon & Barber
+              {t.heroTag}
             </span>
             <span className="label tracking-wider text-[10px] text-paper/80 font-mono">
-              Praha · Kladno
+              {t.heroPlaces}
             </span>
           </div>
 
@@ -254,7 +248,7 @@ export default function Hero({ t, ready }: { t: Dict; ready: boolean }) {
             <div data-hero-fade className="flex items-center justify-between pt-3 border-t border-paper/20 text-paper/80">
               <span className="label text-[10px] text-paper/75 tracking-wider">{t.heroCities}</span>
               <span className="label text-[10px] text-sage flex items-center gap-1.5 font-mono animate-pulse">
-                Scroll ↓
+                {t.heroScroll} ↓
               </span>
             </div>
           </div>
