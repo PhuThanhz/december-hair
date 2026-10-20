@@ -24,10 +24,46 @@ export async function getContent(): Promise<SiteContent> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const content = (await res.json()) as SiteContent;
     cacheLife("hours");
-    return content;
+    return withBundledTexts(content);
   } catch (err) {
     console.warn(`[content] ${API_URL} unavailable (${err}); serving the bundled content`);
     cacheLife("minutes");
     return localContent();
   }
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** `cms` with whatever `bundled` has and it lacks; the paths of what was filled go to `missing` */
+function fill(cms: unknown, bundled: unknown, path: string, missing: string[]): unknown {
+  if (cms === undefined) {
+    missing.push(path);
+    return bundled;
+  }
+  if (isObject(cms) && isObject(bundled)) {
+    const out = { ...cms };
+    for (const [key, value] of Object.entries(bundled)) out[key] = fill(cms[key], value, `${path}.${key}`, missing);
+    return out;
+  }
+  if (Array.isArray(cms) && Array.isArray(bundled)) {
+    return bundled.map((value, i) => fill(cms[i], value, `${path}.${i}`, missing));
+  }
+  return cms;
+}
+
+/**
+ * A text key the code gained (added to `T` in data.ts) is not in the CMS until the backend runs
+ * `sync-texts`: show the bundled wording meanwhile instead of an empty spot.
+ */
+function withBundledTexts(content: SiteContent): SiteContent {
+  const { texts } = localContent();
+  const missing: string[] = [];
+  const filled = {
+    cs: fill(content.texts.cs, texts.cs, "cs", missing),
+    en: fill(content.texts.en, texts.en, "en", missing),
+  } as SiteContent["texts"];
+  if (missing.length) {
+    console.warn(`[content] ${missing.length} texts are not in the CMS yet, showing data.ts (run sync-texts in the backend): ${missing.slice(0, 10).join(", ")}`);
+  }
+  return { ...content, texts: filled };
 }
