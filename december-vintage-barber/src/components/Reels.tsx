@@ -76,12 +76,15 @@ export default function Reels({
     });
   }, [slides.length]);
 
-  const markActive = (j: number) => {
-    const i = mod(j, N);
-    if (i === activeRef.current) return;
-    activeRef.current = i;
-    setActive(i);
-  };
+  const markActive = useCallback(
+    (j: number) => {
+      const i = mod(j, N);
+      if (i === activeRef.current) return;
+      activeRef.current = i;
+      setActive(i);
+    },
+    [N]
+  );
 
   const goTo = useCallback(
     (j: number, duration = 0.85) => {
@@ -195,7 +198,7 @@ export default function Reels({
       vp.removeEventListener("wheel", onWheel);
       clearTimeout(settle);
     };
-  }, [goTo, render]);
+  }, [goTo, render, markActive]);
 
   // Clicking a card brings that very copy to the anchor
   const focusCard = (el: HTMLElement) => {
