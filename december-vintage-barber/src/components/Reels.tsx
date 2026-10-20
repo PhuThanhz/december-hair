@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import Image from "next/image";
+import gsap from "gsap";
 import { REELS, type Dict, type Lang } from "@/app/data";
 import { playWhileVisible } from "@/lib/video";
 import Magnetic from "./Magnetic";
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+
+const N = REELS.length;
+// Two copies so the looping row always covers even very wide screens
+const SLIDES = [...REELS, ...REELS];
 
 /**
  * Proměny — Salon Video Carousel.
  * A luxury studio video carousel showcasing the 6 signature salon reels.
  * Unpinned: vertical page scrolling remains 100% natural and fluid.
- * - Laptop: horizontal carousel with drag, smooth arrow navigation, and sound toggle.
- * - Mobile: touch-swipeable cards with snap scrolling and clear booking CTA.
+ * Flickity-style endless track: press-and-drag (mouse or touch) with momentum that settles onto the
+ * nearest card, horizontal trackpad swipes, and prev/next arrows on both flanks that never hit an end.
  */
 export default function Reels({
   t,
@@ -25,62 +30,177 @@ export default function Reels({
   onBook: (branchId: string) => void;
 }) {
   const root = useRef<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
 
-  // Drag-to-scroll state
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeft = useRef(0);
-  const hasMoved = useRef(false);
+  // Track position (px, unbounded) and the card it is settling on (unbounded, wraps modulo N)
+  const pos = useRef({ x: 0 });
+  const step = useRef(1);
+  const slot = useRef(0);
+  const activeRef = useRef(0);
+  const tween = useRef<gsap.core.Tween | null>(null);
+
+  // Drag state
+  const drag = useRef({ down: false, moved: false, id: -1, startX: 0, startY: 0, originX: 0, lastX: 0, lastT: 0, v: 0 });
 
   useEffect(() => (root.current ? playWhileVisible(root.current) : undefined), []);
 
   // Update muted state across videos
   useEffect(() => {
     videoRefs.current.forEach((v, i) => {
-      if (v) v.muted = i === active ? muted : true;
+      if (v) v.muted = i % N === active ? muted : true;
     });
   }, [active, muted]);
 
-  const scrollBy = (offset: number) => {
-    if (trackRef.current) {
-      trackRef.current.scrollBy({ left: offset, behavior: "smooth" });
-    }
-  };
+  const slotAt = (x: number) => Math.round(-x / step.current);
 
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!trackRef.current) return;
-    isDragging.current = true;
-    hasMoved.current = false;
-    startX.current = e.pageX - trackRef.current.offsetLeft;
-    scrollLeft.current = trackRef.current.scrollLeft;
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current || !trackRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - trackRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.35;
-    if (Math.abs(walk) > 6) hasMoved.current = true;
-    trackRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const onMouseUp = () => {
-    isDragging.current = false;
-  };
-
-  // Track active item when scrolling naturally
-  const onScroll = useCallback(() => {
-    if (!trackRef.current) return;
-    const scrollPos = trackRef.current.scrollLeft;
-    const cardWidth = trackRef.current.firstElementChild?.clientWidth || 320;
-    const newIdx = Math.round(scrollPos / (cardWidth + 20));
-    setActive(Math.max(0, Math.min(REELS.length - 1, newIdx)));
+  // Wrap-around: each card is shifted by whole loops so the row never runs out on either side
+  const render = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const s = step.current;
+    const loop = s * SLIDES.length;
+    const lo = -2 * s;
+    (Array.from(track.children) as HTMLElement[]).forEach((el, i) => {
+      const base = i * s;
+      const p = mod(base + pos.current.x - lo, loop) + lo;
+      el.style.transform = `translate3d(${p - base}px,0,0)`;
+    });
   }, []);
+
+  const markActive = (j: number) => {
+    const i = mod(j, N);
+    if (i === activeRef.current) return;
+    activeRef.current = i;
+    setActive(i);
+  };
+
+  const goTo = useCallback(
+    (j: number, duration = 0.85) => {
+      slot.current = j;
+      activeRef.current = mod(j, N);
+      setActive(activeRef.current);
+      tween.current?.kill();
+      tween.current = gsap.to(pos.current, {
+        x: -j * step.current,
+        duration,
+        ease: "expo.out",
+        onUpdate: render,
+      });
+    },
+    [render]
+  );
+
+  // Shortest way round to a given reel
+  const goToReel = (idx: number) => {
+    let delta = mod(idx - slot.current, N);
+    if (delta > N / 2) delta -= N;
+    goTo(slot.current + delta);
+  };
+
+  // Measure the card pitch (width + gap)
+  useEffect(() => {
+    const measure = () => {
+      const cards = trackRef.current?.children;
+      if (!cards || cards.length < 2) return;
+      step.current = (cards[1] as HTMLElement).offsetLeft - (cards[0] as HTMLElement).offsetLeft || 1;
+      pos.current.x = -slot.current * step.current;
+      render();
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (viewportRef.current) ro.observe(viewportRef.current);
+    return () => {
+      ro.disconnect();
+      tween.current?.kill();
+    };
+  }, [render]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    tween.current?.kill();
+    const d = drag.current;
+    d.down = true;
+    d.moved = false;
+    d.id = e.pointerId;
+    d.startX = d.lastX = e.clientX;
+    d.startY = e.clientY;
+    d.originX = pos.current.x;
+    d.lastT = performance.now();
+    d.v = 0;
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d.down || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.startX;
+    if (!d.moved) {
+      if (Math.abs(dx) < 6) return;
+      // A mostly vertical touch gesture belongs to the page scroll
+      if (Math.abs(e.clientY - d.startY) > Math.abs(dx)) {
+        d.down = false;
+        return;
+      }
+      d.moved = true;
+      viewportRef.current?.setPointerCapture(e.pointerId);
+    }
+    const now = performance.now();
+    const dt = Math.max(1, now - d.lastT);
+    d.v = 0.8 * ((e.clientX - d.lastX) / dt) + 0.2 * d.v;
+    d.lastX = e.clientX;
+    d.lastT = now;
+    pos.current.x = d.originX + dx;
+    render();
+    markActive(slotAt(pos.current.x));
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d.down || e.pointerId !== d.id) return;
+    d.down = false;
+    if (!d.moved) return;
+    // Stale velocity if the pointer rested before release
+    const v = performance.now() - d.lastT > 80 ? 0 : d.v;
+    let target = slotAt(pos.current.x + v * 280);
+    // A quick flick always advances at least one card
+    if (target === slotAt(d.originX) && Math.abs(v) > 0.35) target += v < 0 ? 1 : -1;
+    goTo(target, 0.9);
+  };
+
+  // Horizontal trackpad swipes move the track, then settle on the nearest card
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    let settle = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      tween.current?.kill();
+      pos.current.x -= e.deltaX;
+      render();
+      markActive(slotAt(pos.current.x));
+      clearTimeout(settle);
+      settle = window.setTimeout(() => goTo(slotAt(pos.current.x), 0.7), 120);
+    };
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      vp.removeEventListener("wheel", onWheel);
+      clearTimeout(settle);
+    };
+  }, [goTo, render]);
+
+  // Clicking a card brings that very copy to the anchor
+  const focusCard = (el: HTMLElement) => {
+    const first = trackRef.current?.children[0] as HTMLElement | undefined;
+    const vp = viewportRef.current;
+    if (!first || !vp) return;
+    const anchor = vp.getBoundingClientRect().left + first.offsetLeft;
+    goTo(slot.current + Math.round((el.getBoundingClientRect().left - anchor) / step.current));
+  };
 
   return (
     <section ref={root} className="relative z-10 bg-[#08100a] text-paper overflow-hidden py-16 sm:py-24 lg:py-28 border-t border-paper/10">
@@ -112,29 +232,49 @@ export default function Reels({
 
       {/* Horizontal Studio Video Cards Track */}
       <div className="relative mt-8 sm:mt-12 select-none group/carousel">
-        {/* Scrollable Track (Zero Obstruction, Pristine 9:16 Cards with Generous Side Breathing Room) */}
+        {/* Draggable viewport (Pristine 9:16 Cards with Generous Side Breathing Room) */}
         <div
-          ref={trackRef}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onScroll={onScroll}
-          className="flex gap-5 sm:gap-7 px-6 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 scroll-pl-6 sm:scroll-pl-12 lg:scroll-pl-20 xl:scroll-pl-28 overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch] cursor-grab active:cursor-grabbing snap-x snap-mandatory py-4 touch-pan-x"
+          ref={viewportRef}
+          tabIndex={0}
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={t.reelsTitle}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClickCapture={(e) => {
+            // A drag that ends over a card or button must not count as a click
+            if (drag.current.moved) {
+              e.preventDefault();
+              e.stopPropagation();
+              drag.current.moved = false;
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") goTo(slot.current + 1);
+            else if (e.key === "ArrowLeft") goTo(slot.current - 1);
+            else return;
+            e.preventDefault();
+          }}
+          className="relative overflow-hidden cursor-grab active:cursor-grabbing touch-pan-y outline-none"
         >
-          {REELS.map((r, i) => {
-            const isCurrent = i === active;
+          <div
+            ref={trackRef}
+            className="flex w-max gap-5 sm:gap-7 px-6 sm:px-12 lg:px-20 xl:px-28 2xl:px-36 py-4"
+          >
+          {SLIDES.map((r, i) => {
+            const isCurrent = i % N === active;
             return (
+              <div key={`${r.id}-${i}`} className="shrink-0 will-change-transform">
               <article
-                key={r.id}
-                onClick={() => {
-                  if (hasMoved.current) return;
-                  setActive(i);
+                onClick={(e) => {
+                  focusCard(e.currentTarget);
                   if (videoRefs.current[i]) {
                     videoRefs.current[i]!.play().catch(() => {});
                   }
                 }}
-                className={`group relative shrink-0 snap-start w-[280px] sm:w-[320px] lg:w-[350px] aspect-[9/16] rounded-[24px] sm:rounded-[30px] overflow-hidden bg-black border border-white/10 transition-all duration-500 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85)] ${
+                className={`group relative w-[280px] sm:w-[320px] lg:w-[350px] aspect-[9/16] rounded-[24px] sm:rounded-[30px] overflow-hidden bg-black border border-white/10 transition-all duration-500 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.85)] ${
                   isCurrent ? "ring-1 ring-white/70 scale-[1.01]" : "opacity-85 hover:opacity-100 hover:ring-1 hover:ring-white/40"
                 }`}
               >
@@ -145,7 +285,7 @@ export default function Reels({
                   }}
                   src={r.src}
                   data-poster={r.poster}
-                  muted={i === active ? muted : true}
+                  muted={isCurrent ? muted : true}
                   loop
                   playsInline
                   autoPlay
@@ -166,7 +306,7 @@ export default function Reels({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActive(i);
+                      focusCard(e.currentTarget.closest("article")!);
                       const nextMuted = isCurrent ? !muted : false;
                       setMuted(nextMuted);
                       if (videoRefs.current[i]) {
@@ -214,81 +354,58 @@ export default function Reels({
                   </div>
                 </div>
               </article>
+              </div>
             );
           })}
-        </div>
-
-        {/* Editorial Bottom Navigation Dock (Left: Prev, Center: Progress, Right: Next) */}
-        <div className="relative z-10 mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12 mt-8 sm:mt-10 flex items-center justify-between gap-4">
-          {/* Left: Previous Button */}
-          <Magnetic strength={0.3}>
-            <button
-              onClick={() => scrollBy(-380)}
-              className="group cursor-pointer flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/20 hover:border-paper bg-white/[0.04] hover:bg-paper text-paper hover:text-[#08100a] backdrop-blur-md transition-all duration-300 shadow-sm active:scale-95"
-              aria-label="Předchozí video"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform duration-300 group-hover:-translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15m0 0l6-6m-6 6l6 6" />
-              </svg>
-              <span className="font-mono text-[11px] sm:text-xs uppercase tracking-widest font-medium">
-                {lang === "cs" ? "Předchozí" : "Previous"}
-              </span>
-            </button>
-          </Magnetic>
-
-          {/* Center: Slide Counter & Minimalist Dash Rails */}
-          <div className="flex items-center gap-4 sm:gap-6">
-            <span className="font-mono text-xs sm:text-sm text-paper/40 tracking-widest">
-              {pad(active + 1)} <span className="text-paper/20">/</span> {pad(REELS.length)}
-            </span>
-
-            <div className="hidden sm:flex items-center gap-2">
-              {REELS.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setActive(idx);
-                    if (trackRef.current) {
-                      const cardWidth = trackRef.current.firstElementChild?.clientWidth || 320;
-                      trackRef.current.scrollTo({ left: idx * (cardWidth + 20), behavior: "smooth" });
-                    }
-                  }}
-                  className={`h-1 rounded-full transition-all duration-500 cursor-pointer ${
-                    idx === active ? "w-8 sm:w-10 bg-paper shadow-[0_0_10px_rgba(244,239,230,0.5)]" : "w-2 sm:w-2.5 bg-paper/20 hover:bg-paper/50"
-                  }`}
-                  aria-label={`Přejít na video ${idx + 1}`}
-                />
-              ))}
-            </div>
           </div>
 
-          {/* Right: Next Button */}
-          <Magnetic strength={0.3}>
-            <button
-              onClick={() => scrollBy(380)}
-              className="group cursor-pointer flex items-center gap-2.5 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/20 hover:border-paper bg-white/[0.04] hover:bg-paper text-paper hover:text-[#08100a] backdrop-blur-md transition-all duration-300 shadow-sm active:scale-95"
-              aria-label="Další video"
+          {/* Edge feathering so the flank arrows sit on calm ground */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-24 bg-gradient-to-r from-[#08100a] to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-24 bg-gradient-to-l from-[#08100a] to-transparent z-10" />
+
+          {/* Flank arrows (left: previous, right: next) */}
+          {([
+            { dir: -1, side: "left-3 sm:left-6 lg:left-10", label: lang === "cs" ? "Předchozí video" : "Previous video", d: "M15.75 19.5 8.25 12l7.5-7.5" },
+            { dir: 1, side: "right-3 sm:right-6 lg:right-10", label: lang === "cs" ? "Další video" : "Next video", d: "m8.25 4.5 7.5 7.5-7.5 7.5" },
+          ] as const).map((a) => (
+            <div
+              key={a.dir}
+              className={`absolute top-1/2 -translate-y-1/2 z-20 hidden sm:block ${a.side}`}
             >
-              <span className="font-mono text-[11px] sm:text-xs uppercase tracking-widest font-medium">
-                {lang === "cs" ? "Další" : "Next"}
-              </span>
-              <svg
-                viewBox="0 0 24 24"
-                className="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform duration-300 group-hover:translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6-6m6 6l-6 6" />
-              </svg>
-            </button>
-          </Magnetic>
+              <Magnetic strength={0.3}>
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => goTo(slot.current + a.dir)}
+                  aria-label={a.label}
+                  className="cursor-pointer w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center border border-white/20 bg-black/40 backdrop-blur-md text-paper hover:bg-paper hover:text-[#08100a] hover:border-paper shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] transition-colors duration-300 active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={a.d} />
+                  </svg>
+                </button>
+              </Magnetic>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress rails */}
+        <div className="relative z-10 mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12 mt-8 sm:mt-10 flex items-center justify-center gap-4 sm:gap-6">
+          <span className="font-mono text-xs sm:text-sm text-paper/40 tracking-widest">
+            {pad(active + 1)} <span className="text-paper/20">/</span> {pad(REELS.length)}
+          </span>
+
+          <div className="flex items-center gap-2">
+            {REELS.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => goToReel(idx)}
+                className={`h-1 rounded-full transition-all duration-500 cursor-pointer ${
+                  idx === active ? "w-8 sm:w-10 bg-paper shadow-[0_0_10px_rgba(244,239,230,0.5)]" : "w-2 sm:w-2.5 bg-paper/20 hover:bg-paper/50"
+                }`}
+                aria-label={`Přejít na video ${idx + 1}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
