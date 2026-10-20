@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// The backend's httpOnly session cookie (backend/app/core/security.py)
+// The backend's httpOnly session cookie (december_hair_be/app/core/security.py)
 const SESSION_COOKIE = "dh_session";
 
 /**

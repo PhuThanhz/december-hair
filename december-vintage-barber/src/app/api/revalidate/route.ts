@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 
-// The tags the backend may expire (backend/app/services/revalidate.py)
+// The tags the backend may expire (december_hair_be/app/services/revalidate.py)
 const TAGS = new Set(["content", "seo"]);
 
 const sameSecret = (given: string | null, expected: string) =>

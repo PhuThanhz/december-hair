@@ -17,19 +17,35 @@ Website cho salon December Hair (Praha · Kladno · Mladá Boleslav), viết b�
 
 ---
 
-## ⚙️ backend (FastAPI + PostgreSQL)
-Nội dung của site (chi nhánh, dịch vụ, lookbook, reels, text CZ/EN) nằm trong database và được phục vụ qua `GET /api/v1/public/content`. Site đọc API này (cache tag `content`); backend gọi `POST /api/revalidate` của Next sau mỗi lần lưu. Nếu API không chạy, site hiển thị nội dung có sẵn trong `src/app/data.ts`. Chi tiết: [backend/README.md](backend/README.md).
+## ⚙️ Backend + admin (`/admin`)
+Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/EN, ảnh/video) nằm trong database của backend, repo riêng: **https://github.com/tiendung4411/december_hair_be** (FastAPI + PostgreSQL, hướng dẫn EN/CZ trong README của repo đó). Site đọc `GET /api/v1/public/content`; backend gọi `POST /api/revalidate` của site sau mỗi lần lưu trong admin. **Nếu backend không chạy, site vẫn chạy** bằng nội dung có sẵn trong `src/app/data.ts` (chỉ `/admin` là không dùng được).
 
-- **Chạy lần đầu (dev):**
-  ```bash
-  DH_DB_PORT=5433 docker compose -f docker-compose.dev.yml up -d   # Postgres + Mailpit (5433 nếu máy đã có Postgres ở 5432)
-  cp backend/.env.example backend/.env                                # sửa DATABASE_URL sang cổng 5433 nếu cần, đặt REVALIDATE_SECRET
-  cp december-vintage-barber/.env.example december-vintage-barber/.env.local   # cùng REVALIDATE_SECRET
-  cd backend && uv sync && uv run alembic upgrade head
-  uv run python -m app.cli seed seed/content.json --public ../december-vintage-barber/public
-  uv run fastapi dev app/main.py        # http://localhost:8000/docs
+- **Chạy cùng backend (dev):** clone hai repo cạnh nhau:
   ```
+  december-hair/       ← repo này (site + /admin)
+  december_hair_be/    ← backend
+  ```
+  1. Trong `december_hair_be`: `cp .env.example .env`, đặt `JWT_SECRET`, một `REVALIDATE_SECRET` và `NEXT_INTERNAL_URL=http://host.docker.internal:3004`, rồi:
+     ```bash
+     docker compose up -d --build
+     docker compose exec api python -m app.cli create-admin --email you@example.com --name "Your Name"
+     docker compose exec api python -m app.cli seed seed/content.json --public seed/media
+     ```
+  2. Trong `december-vintage-barber`: `cp .env.example .env.local`, đặt `API_URL=http://localhost:8000/api/v1` và **cùng** `REVALIDATE_SECRET`, rồi `npm run dev`.
+  3. Site: http://localhost:3004 · Admin: http://localhost:3004/admin (luôn đăng nhập qua cổng 3004, không qua 8000).
 - **URL:** `/` tiếng Séc, `/en` tiếng Anh, `/cs…` chuyển về `/…`. Ảnh/video CMS nằm ở `/media/…` (dev: Next chuyển tiếp sang backend).
+
+### Quy ước khi làm việc
+- **Text, giá, ảnh, chi nhánh: sửa trong `/admin`**, không sửa trong `data.ts`. `data.ts` giờ chỉ là nội dung dự phòng khi backend tắt và nguồn để tạo dữ liệu mẫu (seed).
+- Trong component, lấy dữ liệu bằng `useContent()` (chi nhánh, dịch vụ, reels…) và `t` (text) thay vì import `BRANCHES`, `SERVICES`, `REELS`… từ `data.ts`. Kiểu dữ liệu: `src/content/types.ts`.
+- **Thêm text mới:** thêm key vào cả `cs` và `en` trong `T` (`data.ts`). Site hiện ngay giá trị trong `data.ts` (log server báo key nào CMS chưa có). Để sửa được trong admin, đưa key vào database:
+  ```bash
+  cd december-vintage-barber && npm run export:content          # ghi ../../december_hair_be/seed/content.json
+  cd ../../december_hair_be && docker compose exec -T api python -m app.cli sync-texts - < seed/content.json
+  ```
+  Xoá key khỏi code thì thêm `--prune`. Giá trị đã sửa trong admin được giữ nguyên.
+- Thêm **trường dữ liệu mới** (vd. một thuộc tính của chi nhánh) là thay đổi ở cả hai repo: báo người làm backend.
+- Mỗi người làm trên nhánh riêng, mở PR vào `main`, pull `main` thường xuyên.
 
 ---
 

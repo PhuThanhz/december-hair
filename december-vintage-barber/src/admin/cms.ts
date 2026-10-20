@@ -1,4 +1,4 @@
-// The CMS API's shapes (backend/app/schemas/cms.py)
+// The CMS API's shapes (december_hair_be/app/schemas/cms.py)
 
 export type Category = "women" | "men" | "kids" | "spa";
 export const CATEGORIES: Category[] = ["women", "men", "kids", "spa"];

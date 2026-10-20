@@ -1,4 +1,4 @@
-// The admin API's shapes (backend/app/schemas/auth.py and admin.py)
+// The admin API's shapes (december_hair_be/app/schemas/auth.py and admin.py)
 
 export type Role = "admin" | "editor" | "branch_manager";
 export type UiLang = "en" | "cs";

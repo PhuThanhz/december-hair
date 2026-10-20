@@ -3,7 +3,7 @@ import { everyDay } from "@/lib/hours";
 
 // The site's starting content. The live site reads the CMS (src/content/index.ts); this file is
 //   - the fallback the page renders when the API can't be reached (src/content/local.ts), and
-//   - the seed for a new database: npm run export:content, then `python -m app.cli seed` in backend/.
+//   - the seed for a new database: npm run export:content, then `python -m app.cli seed` in the backend repo (december_hair_be).
 // Editing it changes neither the CMS nor the live site.
 
 export const BRANCHES: Branch[] = [
