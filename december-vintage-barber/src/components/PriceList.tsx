@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CATEGORIES, type Category, type Dict, type Lang, type Service } from "@/content/types";
+import { CATEGORIES, HAIR_LENGTHS, type Category, type Dict, type HairLength, type Lang, type Service } from "@/content/types";
 import { useContent } from "@/content/ContentProvider";
+import { priceFor } from "@/content/helpers";
 import { czk as fmt, mins } from "@/lib/format";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 
@@ -12,6 +13,7 @@ const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 
  * "Build your visit": tick the services you want and a receipt prints beside
  * the list with the total price and time in the chair, ready to book.
  * Driven entirely by the services in the content, so the back office can add or change rows freely.
+ * Services priced by hair length follow the length picked above the list.
  */
 export default function PriceList({
   t,
@@ -29,18 +31,23 @@ export default function PriceList({
   // Start with the first service ticked, so the receipt shows how it works
   const [picked, setPicked] = useState<string[]>(services.length ? [services[0].id] : []);
   const [inView, setInView] = useState(false);
+  const [length, setLength] = useState<HairLength>("short");
+  const byLength = services.some((s) => s.lengthPrices);
+  const lengthName = t.hairLengths[HAIR_LENGTHS.indexOf(length)];
 
   const chosen = services.filter((s) => picked.includes(s.id));
-  const total = chosen.reduce((sum, s) => sum + s.price, 0);
+  const total = chosen.reduce((sum, s) => sum + priceFor(s, length), 0);
   const time = chosen.reduce((sum, s) => sum + s.durationMin, 0);
   const fromPrice = chosen.some((s) => s.priceFrom);
   const groups = CATEGORIES.map((c) => ({ cat: c, items: services.filter((s) => s.category === c) })).filter((g) => g.items.length);
   const name = (s: Service) => s.name[lang];
+  // What the salon reads in the booking: the hair length too, where it sets the price
+  const booked = (s: Service) => (s.lengthPrices ? `${name(s)} (${t.hairLength.toLowerCase()}: ${lengthName.toLowerCase()})` : name(s));
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   const bookSelection = () => {
     if (!chosen.length) return;
-    onBook(chosen[0].category, `${t.servicesLabel}: ${chosen.map(name).join(", ")}`);
+    onBook(chosen[0].category, `${t.servicesLabel}: ${chosen.map(booked).join(", ")}`);
   };
 
   useGSAP(
@@ -116,6 +123,26 @@ export default function PriceList({
         <div className="mt-16 sm:mt-20 grid grid-cols-12 lg:gap-x-10 xl:gap-x-20 gap-y-14 items-start">
           {/* The menu: tap a row to add or remove it */}
           <div className="col-span-12 lg:col-span-7 space-y-12">
+            {byLength && (
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3" role="radiogroup" aria-label={t.hairLength}>
+                <span className="label text-ink-soft">{t.hairLength}</span>
+                <div className="inline-flex rounded-full border border-ink/20 p-1">
+                  {HAIR_LENGTHS.map((len, i) => (
+                    <button
+                      key={len}
+                      role="radio"
+                      aria-checked={length === len}
+                      onClick={() => setLength(len)}
+                      className={`cursor-pointer rounded-full px-4 sm:px-5 py-2 text-sm transition-colors duration-300 ${
+                        length === len ? "bg-forest text-paper" : "text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {t.hairLengths[i]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {groups.map((g, gi) => (
               <div key={g.cat} data-group>
                 <div className="flex items-baseline gap-4 border-b border-ink pb-3">
@@ -154,11 +181,11 @@ export default function PriceList({
                               <span className="leader" aria-hidden />
                               <span className="price text-lg sm:text-xl">
                                 {s.priceFrom && <span className="text-xs font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
-                                {fmt(s.price)} Kč
+                                {fmt(priceFor(s, length))} Kč
                               </span>
                             </span>
                             <span className="mt-1.5 flex justify-between gap-4 text-sm text-ink-soft">
-                              <span>{s.note[lang]}</span>
+                              <span>{[s.note[lang], s.lengthPrices && lengthName].filter(Boolean).join(" · ")}</span>
                               <span className="tabular-nums whitespace-nowrap">{mins(s.durationMin)}</span>
                             </span>
                           </span>
@@ -188,11 +215,14 @@ export default function PriceList({
                       <span className="leader" aria-hidden />
                       <span className="price">
                         {s.priceFrom && <span className="text-[11px] font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
-                        {fmt(s.price)} Kč
+                        {fmt(priceFor(s, length))} Kč
                       </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-xs text-ink-soft">
-                      <span className="tabular-nums">{mins(s.durationMin)}</span>
+                      <span className="tabular-nums">
+                        {mins(s.durationMin)}
+                        {s.lengthPrices && ` · ${lengthName}`}
+                      </span>
                       <button
                         onClick={() => toggle(s.id)}
                         aria-label={`${t.receiptClear} ${name(s)}`}

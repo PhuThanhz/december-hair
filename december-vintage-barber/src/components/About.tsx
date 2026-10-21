@@ -14,9 +14,9 @@ type Clip = (typeof CLIPS)[number];
 
 // Which services each clip stands for (Service.id), and where booking it starts
 const CLIP_SERVICES: Record<Clip, { services: string[]; category?: Category }> = {
-  cut: { services: ["kids-cut", "mens-cut", "fade-beard", "cut-blowdry"] },
-  colour: { services: ["colour-highlights", "balayage"], category: "women" },
-  care: { services: ["wash-massage", "head-spa"], category: "spa" },
+  cut: { services: ["kids-cut", "girls-cut", "mens-cut", "clipper-cut", "women-tips", "women-cut"] },
+  colour: { services: ["women-colour", "women-trend-colour", "highlights-t", "toning", "balayage", "mens-colour", "mens-highlights"], category: "women" },
+  care: { services: ["olaplex", "keratin", "wash-blowdry"], category: "spa" },
 };
 
 /** "od 390 Kč · 30–60 min" for each clip, straight from the price list; null when none of its services is listed */

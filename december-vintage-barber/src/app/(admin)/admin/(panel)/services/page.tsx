@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/admin/api";
-import { CATEGORIES, slugify, type Category, type ServiceAdmin } from "@/admin/cms";
+import { CATEGORIES, HAIR_LENGTHS, slugify, type Category, type ServiceAdmin } from "@/admin/cms";
 import { fmt } from "@/admin/i18n";
 import { useAdminT, useMe } from "@/admin/Providers";
 import { Alert, Badge, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
@@ -20,8 +20,11 @@ const BLANK: Draft = {
   durationMin: 60,
   priceCzk: 0,
   priceFrom: false,
+  lengthPrices: null,
   isPublished: true,
 };
+
+const czk = (n: number) => n.toLocaleString("cs-CZ");
 
 function ServiceDialog({ service, onClose }: { service: ServiceAdmin | "new"; onClose: () => void }) {
   const { t } = useAdminT();
@@ -89,12 +92,39 @@ function ServiceDialog({ service, onClose }: { service: ServiceAdmin | "new"; on
               <Input id={id} type="number" min={1} required value={d.durationMin} onChange={(e) => set({ durationMin: Number(e.target.value) })} />
             )}
           </Field>
-          <Field label={t.cms.services.price}>
-            {(id) => (
-              <Input id={id} type="number" min={0} required value={d.priceCzk} onChange={(e) => set({ priceCzk: Number(e.target.value) })} />
-            )}
-          </Field>
+          {!d.lengthPrices && (
+            <Field label={t.cms.services.price}>
+              {(id) => (
+                <Input id={id} type="number" min={0} required value={d.priceCzk} onChange={(e) => set({ priceCzk: Number(e.target.value) })} />
+              )}
+            </Field>
+          )}
         </div>
+        <Checkbox
+          label={t.cms.services.byLength}
+          checked={!!d.lengthPrices}
+          onChange={(e) =>
+            set({ lengthPrices: e.target.checked ? { short: d.priceCzk, medium: d.priceCzk, long: d.priceCzk } : null })
+          }
+        />
+        {d.lengthPrices && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {HAIR_LENGTHS.map((len) => (
+              <Field key={len} label={`${t.cms.services.lengths[len]} · ${t.cms.services.price}`}>
+                {(id) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    required
+                    value={d.lengthPrices![len]}
+                    onChange={(e) => set({ lengthPrices: { ...d.lengthPrices!, [len]: Number(e.target.value) } })}
+                  />
+                )}
+              </Field>
+            ))}
+          </div>
+        )}
         <Checkbox label={t.cms.services.priceFrom} checked={d.priceFrom} onChange={(e) => set({ priceFrom: e.target.checked })} />
         <Checkbox label={t.cms.publish} checked={d.isPublished} onChange={(e) => set({ isPublished: e.target.checked })} />
         {isNew && (
@@ -178,9 +208,9 @@ export default function ServicesPage() {
                     <p className="text-xs text-ink-soft truncate">{lang === "cs" ? s.noteCs : s.noteEn}</p>
                   </div>
                   <span className="tabular-nums text-ink-soft">{s.durationMin} min</span>
-                  <span className="tabular-nums font-medium w-24 text-right">
+                  <span className="tabular-nums font-medium text-right min-w-24">
                     {s.priceFrom ? `${t.cms.services.from} ` : ""}
-                    {s.priceCzk.toLocaleString("cs-CZ")} Kč
+                    {s.lengthPrices ? HAIR_LENGTHS.map((len) => czk(s.lengthPrices![len])).join(" / ") : czk(s.priceCzk)} Kč
                   </span>
                   <Badge tone={s.isPublished ? "green" : "muted"}>{s.isPublished ? t.cms.published : t.cms.hidden}</Badge>
                   {s.looks > 0 && <span className="text-xs text-ink-soft">{fmt(t.cms.services.usedBy, { n: String(s.looks) })}</span>}

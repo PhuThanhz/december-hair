@@ -53,6 +53,11 @@ export interface Branch {
   specialDays: SpecialDay[];
 }
 
+/** The hair lengths a price can depend on (the salon's krátké / polodlouhé / dlouhé) */
+export type HairLength = "short" | "medium" | "long";
+export const HAIR_LENGTHS: HairLength[] = ["short", "medium", "long"];
+export type LengthPrices = Record<HairLength, number>;
+
 export interface Service {
   /** Stable slug; looks and other content refer to services by it */
   id: string;
@@ -64,6 +69,8 @@ export interface Service {
   price: number;
   /** Price is a starting price ("od") */
   priceFrom: boolean;
+  /** CZK by hair length; then `price` is the short-hair one */
+  lengthPrices: LengthPrices | null;
   image: string | null;
 }
 

@@ -112,38 +112,67 @@ export const REELS: Reel[] = [
   },
 ];
 
-// TODO(owner): ceny, délky a názvy služeb jsou orientační — potvrdit s majitelem salonu.
+// Ceny podle ceníku salonu (říjen 2026). Délky služeb jsou orientační, salon je upraví v administraci.
+// Ženské služby (a dívčí střih, regenerace) mají ceny podle délky vlasů: krátké / polodlouhé / dlouhé.
+const byLength = (short: number, medium: number, long: number) => ({ price: short, lengthPrices: { short, medium, long } });
+const single = (price: number) => ({ price, lengthPrices: null });
+const NO_NOTE = { cs: "", en: "" };
+const UP_TO_10 = { cs: "do 10 let", en: "up to 10 years" };
+const BY_USE = { cs: "cena dle spotřeby materiálu", en: "price depends on the product used" };
+
 export const SERVICES: Service[] = [
-  { id: "cut-blowdry", category: "women", name: { cs: "Střih a foukaná", en: "Cut & blow-dry" }, note: { cs: "konzultace, mytí, styling", en: "consultation, wash, styling" }, durationMin: 60, price: 890, priceFrom: false, image: "/images/women-layered-copper.webp" },
-  { id: "balayage", category: "women", name: { cs: "Balayage", en: "Balayage" }, note: { cs: "včetně tónování a foukané", en: "toner and blow-dry included" }, durationMin: 180, price: 2490, priceFrom: true, image: "/images/women-blonde-waves.webp" },
-  { id: "colour-highlights", category: "women", name: { cs: "Barvení a melír", en: "Colour & highlights" }, note: { cs: "dle délky vlasů", en: "depending on length" }, durationMin: 120, price: 1890, priceFrom: true, image: "/images/color-copper-mullet.webp" },
-  { id: "mens-cut", category: "men", name: { cs: "Pánský střih", en: "Men's haircut" }, note: { cs: "nůžky a strojek, mytí", en: "scissors and clipper, wash" }, durationMin: 35, price: 490, priceFrom: false, image: "/images/men-textured-taper.webp" },
-  { id: "fade-beard", category: "men", name: { cs: "Fade a úprava vousů", en: "Fade & beard trim" }, note: { cs: "kontury břitvou, horký ručník", en: "razor lines, hot towel" }, durationMin: 50, price: 790, priceFrom: false, image: "/images/men-skin-fade-beard.webp" },
-  { id: "kids-cut", category: "kids", name: { cs: "Dětský střih", en: "Kids' haircut" }, note: { cs: "do 12 let", en: "up to 12 years" }, durationMin: 30, price: 390, priceFrom: false, image: "/images/haircut-kid-fade.png" },
-  { id: "wash-massage", category: "spa", name: { cs: "Mytí a masáž hlavy", en: "Wash & head massage" }, note: { cs: "relaxační mytí s masáží", en: "relaxing wash with massage" }, durationMin: 30, price: 450, priceFrom: false, image: "/images/service-hair-wash-massage.png" },
-  { id: "head-spa", category: "spa", name: { cs: "Head spa", en: "Head spa" }, note: { cs: "peeling pokožky, pára, masáž hlavy a šíje", en: "scalp peel, steam, head and neck massage" }, durationMin: 60, price: 1290, priceFrom: false, image: "/images/care-olaplex-blonde.webp" },
+  // Ženy · střih
+  { id: "women-tips", category: "women", name: { cs: "Stříhání konečků", en: "Trim (ends only)" }, note: NO_NOTE, durationMin: 30, ...single(450), priceFrom: false, image: "/images/women-long-layers.webp" },
+  { id: "women-cut", category: "women", name: { cs: "Klasický střih", en: "Classic cut" }, note: NO_NOTE, durationMin: 60, ...byLength(550, 650, 750), priceFrom: false, image: "/images/women-long-layers.webp" },
+  { id: "wash-blowdry", category: "women", name: { cs: "Mytí a foukaná", en: "Wash & blow-dry" }, note: NO_NOTE, durationMin: 45, ...byLength(400, 450, 500), priceFrom: false, image: "/images/service-hair-styling-iron.png" },
+  // Ženy · barvení
+  { id: "women-colour", category: "women", name: { cs: "Barvení vlasů", en: "Hair colouring" }, note: NO_NOTE, durationMin: 120, ...byLength(1200, 1500, 1800), priceFrom: false, image: "/images/women-cherry-red.webp" },
+  { id: "women-trend-colour", category: "women", name: { cs: "Trendy barvy", en: "Trend colours" }, note: NO_NOTE, durationMin: 150, ...byLength(2000, 2500, 3000), priceFrom: false, image: "/images/women-cherry-red.webp" },
+  { id: "highlights-t", category: "women", name: { cs: "Melír T-sekce", en: "Highlights – T-section" }, note: NO_NOTE, durationMin: 90, ...byLength(1000, 1200, 1400), priceFrom: false, image: "/images/women-blonde-waves.webp" },
+  { id: "highlights-half", category: "women", name: { cs: "Melír 1/2 hlavy", en: "Highlights – half head" }, note: NO_NOTE, durationMin: 120, ...byLength(1400, 1600, 1800), priceFrom: false, image: "/images/women-blonde-waves.webp" },
+  { id: "highlights-full", category: "women", name: { cs: "Melír celá hlava", en: "Highlights – full head" }, note: NO_NOTE, durationMin: 150, ...byLength(1600, 1900, 2200), priceFrom: false, image: "/images/women-blonde-waves.webp" },
+  { id: "toning", category: "women", name: { cs: "Tónování", en: "Toning" }, note: NO_NOTE, durationMin: 45, ...byLength(800, 1000, 1200), priceFrom: false, image: "/images/showcase-balayage-curls.png" },
+  { id: "balayage", category: "women", name: { cs: "Balayage a tónování", en: "Balayage & toning" }, note: BY_USE, durationMin: 180, ...single(3500), priceFrom: true, image: "/images/showcase-balayage-curls.png" },
+  { id: "women-perm", category: "women", name: { cs: "Trvalá ondulace", en: "Perm" }, note: BY_USE, durationMin: 150, ...single(2000), priceFrom: true, image: null },
+  // Muži · střih
+  { id: "mens-cut", category: "men", name: { cs: "Klasický střih", en: "Classic cut" }, note: NO_NOTE, durationMin: 40, ...single(450), priceFrom: false, image: "/images/men-textured-crop-fade.webp" },
+  { id: "clipper-cut", category: "men", name: { cs: "Střih strojkem", en: "Clipper cut" }, note: NO_NOTE, durationMin: 30, ...single(400), priceFrom: false, image: "/images/men-dark-fade-side.webp" },
+  { id: "beard", category: "men", name: { cs: "Vousy", en: "Beard" }, note: NO_NOTE, durationMin: 20, ...single(350), priceFrom: false, image: "/images/men-skin-fade-beard-salon.webp" },
+  { id: "beard-with-cut", category: "men", name: { cs: "Vousy ke střihu", en: "Beard with a haircut" }, note: { cs: "při stříhání vlasů", en: "when booked with a haircut" }, durationMin: 15, ...single(250), priceFrom: false, image: "/images/men-skin-fade-beard-salon.webp" },
+  // Muži · barvení
+  { id: "mens-colour", category: "men", name: { cs: "Barvení vlasů", en: "Hair colouring" }, note: NO_NOTE, durationMin: 60, ...single(1000), priceFrom: false, image: null },
+  { id: "mens-trend-colour", category: "men", name: { cs: "Trendy barvy", en: "Trend colours" }, note: NO_NOTE, durationMin: 90, ...single(1600), priceFrom: false, image: "/images/men-platinum-crop.webp" },
+  { id: "mens-highlights", category: "men", name: { cs: "Melír a tónování", en: "Highlights & toning" }, note: NO_NOTE, durationMin: 90, ...single(1600), priceFrom: false, image: "/images/men-platinum-crop.webp" },
+  { id: "mens-perm", category: "men", name: { cs: "Trvalá ondulace", en: "Perm" }, note: NO_NOTE, durationMin: 90, ...single(1600), priceFrom: false, image: null },
+  // Děti
+  { id: "kids-cut", category: "kids", name: { cs: "Dětský střih – kluci", en: "Kids' cut – boys" }, note: UP_TO_10, durationMin: 30, ...single(300), priceFrom: false, image: "/images/haircut-kid-fade.png" },
+  { id: "girls-cut", category: "kids", name: { cs: "Dětský střih – holky", en: "Kids' cut – girls" }, note: UP_TO_10, durationMin: 40, ...byLength(350, 400, 450), priceFrom: false, image: null },
+  { id: "kids-tips", category: "kids", name: { cs: "Dětské stříhání konečků", en: "Kids' trim (ends only)" }, note: NO_NOTE, durationMin: 20, ...single(300), priceFrom: false, image: null },
+  // Regenerace
+  { id: "olaplex", category: "spa", name: { cs: "Olaplex", en: "Olaplex" }, note: NO_NOTE, durationMin: 30, ...byLength(500, 700, 900), priceFrom: false, image: "/images/care-olaplex-blonde.webp" },
+  { id: "keratin", category: "spa", name: { cs: "Keratin", en: "Keratin treatment" }, note: NO_NOTE, durationMin: 120, ...byLength(2000, 2500, 3000), priceFrom: false, image: "/images/treatment-steaming-rinse.png" },
 ];
 
 // The lookbook: real work from the salon, each tied to the service behind it (price and time come from there)
 export const LOOKS: Look[] = [
   { id: "blonde-waves", image: "/images/women-blonde-waves.webp", title: { cs: "Blond vlny", en: "Blonde waves" }, serviceId: "balayage", category: "women" },
-  { id: "hair-tattoo-fade", image: "/images/men-hair-tattoo.webp", title: { cs: "Fade s ornamentem", en: "Hair tattoo fade" }, serviceId: "fade-beard", category: "men" },
-  { id: "layered-cut", image: "/images/women-layered-copper.webp", title: { cs: "Vrstvený střih", en: "Layered cut" }, serviceId: "cut-blowdry", category: "women" },
-  { id: "classic-fade", image: "/images/men-classic-fade.jpg", title: { cs: "Klasický pánský fade", en: "Classic gentleman's fade" }, serviceId: "mens-cut", category: "men" },
-  { id: "lilac-fade", image: "/images/men-lilac-fade.webp", title: { cs: "Lila fade", en: "Lilac fade" }, serviceId: "colour-highlights", category: "men" },
-  { id: "copper-tips", image: "/images/color-copper-mullet.webp", title: { cs: "Měděné konce", en: "Copper tips" }, serviceId: "colour-highlights", category: "women" },
-  { id: "skin-fade-beard", image: "/images/men-skin-fade-beard.webp", title: { cs: "Skin fade a vousy", en: "Skin fade & beard" }, serviceId: "fade-beard", category: "men" },
+  { id: "hair-tattoo-fade", image: "/images/men-fade-design.webp", title: { cs: "Fade s ornamentem", en: "Hair tattoo fade" }, serviceId: "mens-cut", category: "men" },
+  { id: "layered-cut", image: "/images/women-long-layers.webp", title: { cs: "Vrstvený střih", en: "Layered cut" }, serviceId: "women-cut", category: "women" },
+  { id: "classic-fade", image: "/images/men-light-mid-fade.webp", title: { cs: "Klasický fade", en: "Classic fade" }, serviceId: "mens-cut", category: "men" },
+  { id: "platinum-crop", image: "/images/men-platinum-crop.webp", title: { cs: "Platinový crop", en: "Platinum crop" }, serviceId: "mens-highlights", category: "men" },
+  { id: "cherry-red", image: "/images/women-cherry-red.webp", title: { cs: "Višňově červená", en: "Cherry red" }, serviceId: "women-trend-colour", category: "women" },
+  { id: "skin-fade-beard", image: "/images/men-skin-fade-beard-salon.webp", title: { cs: "Skin fade a vousy", en: "Skin fade & beard" }, serviceId: "mens-cut", category: "men" },
   { id: "boys-fade", image: "/images/haircut-kid-fade.png", title: { cs: "Klučičí fade", en: "Boys' fade" }, serviceId: "kids-cut", category: "kids" },
-  { id: "olaplex-care", image: "/images/care-olaplex-blonde.webp", title: { cs: "Olaplex péče", en: "Olaplex care" }, serviceId: "head-spa", category: "spa" },
+  { id: "olaplex-care", image: "/images/care-olaplex-blonde.webp", title: { cs: "Olaplex péče", en: "Olaplex care" }, serviceId: "olaplex", category: "spa" },
   { id: "textured-taper", image: "/images/men-textured-taper.webp", title: { cs: "Texturovaný taper", en: "Textured taper" }, serviceId: "mens-cut", category: "men" },
   { id: "balayage-curls", image: "/images/showcase-balayage-curls.png", title: { cs: "Balayage lokny", en: "Balayage curls" }, serviceId: "balayage", category: "women" },
-  { id: "scissor-cut", image: "/images/barber-scissor-cut.webp", title: { cs: "Klasický střih nůžkami", en: "Classic scissor cut" }, serviceId: "mens-cut", category: "men" },
-  { id: "short-mens-cut", image: "/images/stylist-haircut-action.png", title: { cs: "Krátký pánský střih", en: "Short men's cut" }, serviceId: "mens-cut", category: "men" },
-  { id: "razor-design", image: "/images/haircut-fade-tattoo-pattern.png", title: { cs: "Vzor břitvou na míru", en: "Razor hair design" }, serviceId: "fade-beard", category: "men" },
-  { id: "blowdry-styling", image: "/images/service-hair-styling-iron.png", title: { cs: "Foukaná a styling", en: "Blow-dry & styling" }, serviceId: "cut-blowdry", category: "women" },
-  { id: "wash-massage", image: "/images/service-hair-wash-massage.png", title: { cs: "Masáž hlavy a mytí", en: "Wash & head massage" }, serviceId: "wash-massage", category: "spa" },
-  { id: "steam-treatment", image: "/images/treatment-steaming-rinse.png", title: { cs: "Parní lázeň vlasů", en: "Steam scalp treatment" }, serviceId: "head-spa", category: "spa" },
-  { id: "deep-care", image: "/images/salon-wash-stations.png", title: { cs: "Rituál hloubkové péče", en: "Deep care ritual" }, serviceId: "head-spa", category: "spa" },
+  { id: "scissor-cut", image: "/images/men-dark-textured-crop.webp", title: { cs: "Texturovaný střih nůžkami", en: "Textured scissor cut" }, serviceId: "mens-cut", category: "men" },
+  { id: "short-mens-cut", image: "/images/men-dark-fade-side.webp", title: { cs: "Krátký pánský střih", en: "Short men's cut" }, serviceId: "mens-cut", category: "men" },
+  { id: "textured-crop", image: "/images/men-textured-crop-fade.webp", title: { cs: "Texturovaný crop s fade", en: "Textured crop & fade" }, serviceId: "mens-cut", category: "men" },
+  { id: "blowdry-styling", image: "/images/service-hair-styling-iron.png", title: { cs: "Foukaná a styling", en: "Blow-dry & styling" }, serviceId: "wash-blowdry", category: "women" },
+  { id: "messy-crop", image: "/images/men-messy-textured.webp", title: { cs: "Volný texturovaný střih", en: "Loose textured cut" }, serviceId: "mens-cut", category: "men" },
+  { id: "keratin-care", image: "/images/treatment-steaming-rinse.png", title: { cs: "Keratinová regenerace", en: "Keratin treatment" }, serviceId: "keratin", category: "spa" },
+  { id: "deep-care", image: "/images/salon-wash-stations.png", title: { cs: "Rituál hloubkové péče", en: "Deep care ritual" }, serviceId: "olaplex", category: "spa" },
 ];
 
 // Who we look after, one mirror each. `focus` keeps the head and face inside a narrow mirror.
@@ -159,20 +188,12 @@ export const PANELS: Panel[] = [
   },
   {
     id: "men",
-    image: "/images/barber-scissor-cut.webp",
-    focus: "100% 40%",
+    image: "/images/men-skin-fade-beard-salon.webp",
+    focus: "45% 35%",
     bookingCategory: "men",
     name: { cs: "Muži", en: "Men" },
     line: { cs: "Precizní fade, čisté kontury a chvíle klidu.", en: "Precise fades, clean lines and a moment of calm." },
     tags: { cs: ["fade", "úprava vousů", "horký ručník"], en: ["fade", "beard trim", "hot towel"] },
-  },
-  {
-    id: "seniors",
-    image: "/images/men-classic-fade.jpg",
-    focus: "55% 25%",
-    name: { cs: "Senioři", en: "Seniors" },
-    line: { cs: "Klasický střih bez spěchu, s pohodlím a péčí.", en: "A classic cut, unhurried, with comfort and care." },
-    tags: { cs: ["bez spěchu", "klasický střih", "pohodlí"], en: ["unhurried", "classic cut", "comfort"] },
   },
   {
     id: "kids",
@@ -181,16 +202,16 @@ export const PANELS: Panel[] = [
     bookingCategory: "kids",
     name: { cs: "Děti", en: "Kids" },
     line: { cs: "Klidný střih bez stresu, i pro ty nejmenší.", en: "A calm, stress-free cut, even for the littlest ones." },
-    tags: { cs: ["trpělivost", "do 12 let", "bez stresu"], en: ["patience", "up to 12", "no stress"] },
+    tags: { cs: ["trpělivost", "do 10 let", "bez stresu"], en: ["patience", "up to 10", "no stress"] },
   },
   {
     id: "care",
-    image: "/images/service-hair-wash-massage.png",
-    focus: "32% 40%",
+    image: "/images/care-olaplex-blonde.webp",
+    focus: "55% 40%",
     bookingCategory: "spa",
     name: { cs: "Péče", en: "Care" },
-    line: { cs: "Mytí, pára a masáž hlavy. Chvíle jen pro vás.", en: "Wash, steam and head massage. Time just for you." },
-    tags: { cs: ["masáž hlavy", "pára", "head spa"], en: ["head massage", "steam", "head spa"] },
+    line: { cs: "Olaplex a keratin vrátí vlasům sílu a lesk.", en: "Olaplex and keratin bring back strength and shine." },
+    tags: { cs: ["olaplex", "keratin", "regenerace"], en: ["olaplex", "keratin", "repair"] },
   },
 ];
 
@@ -227,7 +248,7 @@ const cs = {
   navWork: "Naše práce",
   menuContact: "Kontakt",
   menuHint: {
-    sluzby: "Ženy · Muži · Děti · Péče",
+    sluzby: "Ženy · Muži · Děti · Regenerace",
     cenik: "od {price} Kč · spočítejte si návštěvu",
     salon: "Proměny z našich křesel",
     poukazy: "1 000 nebo 3 000 Kč, platí 12 měsíců",
@@ -264,6 +285,8 @@ const cs = {
   pricesBook: "Rezervovat",
   pricesLead: "Sestavte si návštěvu",
   pricesHow: "Vyberte služby a hned uvidíte cenu i čas.",
+  hairLength: "Délka vlasů",
+  hairLengths: ["Krátké", "Polodlouhé", "Dlouhé"],
   receiptTitle: "Váš výběr",
   receiptEmpty: "Zatím nic. Klikněte na služby vlevo.",
   receiptTotal: "Celkem",
@@ -272,7 +295,7 @@ const cs = {
   receiptClear: "Vymazat",
   receiptFoot: "Orientační cena · finální potvrdí stylista",
   receiptVat: "včetně DPH",
-  cat: { women: "Ženy", men: "Muži", kids: "Děti", spa: "Péče" },
+  cat: { women: "Ženy", men: "Muži", kids: "Děti", spa: "Regenerace" },
 
   reelsTitle: "Proměny",
   reelsBody: "Nahlédněte do atmosféry našich salonů v Praze, Kladně a Mladé Boleslavi.",
@@ -358,7 +381,7 @@ const en: Dict = {
   navWork: "Our work",
   menuContact: "Contact",
   menuHint: {
-    sluzby: "Women · Men · Kids · Care",
+    sluzby: "Women · Men · Kids · Treatments",
     cenik: "from {price} CZK · build your visit",
     salon: "Transformations from our chairs",
     poukazy: "1,000 or 3,000 CZK, valid 12 months",
@@ -394,6 +417,8 @@ const en: Dict = {
   pricesBook: "Book",
   pricesLead: "Build your visit",
   pricesHow: "Pick your services and see the price and time instantly.",
+  hairLength: "Hair length",
+  hairLengths: ["Short", "Medium", "Long"],
   receiptTitle: "Your selection",
   receiptEmpty: "Nothing yet. Tap services on the left.",
   receiptTotal: "Total",
@@ -402,7 +427,7 @@ const en: Dict = {
   receiptClear: "Clear",
   receiptFoot: "Estimate · your stylist confirms the final price",
   receiptVat: "VAT included",
-  cat: { women: "Women", men: "Men", kids: "Kids", spa: "Care" },
+  cat: { women: "Women", men: "Men", kids: "Kids", spa: "Treatments" },
 
   reelsTitle: "Transformations",
   reelsBody: "Experience the unique atmosphere of our salons in Prague, Kladno and Mladá Boleslav.",

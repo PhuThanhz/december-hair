@@ -5,7 +5,7 @@ import Image from "next/image";
 import Marquee from "react-fast-marquee";
 import type { Category, Dict, Lang, Look, Service } from "@/content/types";
 import { useContent } from "@/content/ContentProvider";
-import { findService } from "@/content/helpers";
+import { findService, startsFrom } from "@/content/helpers";
 import { czk, mins } from "@/lib/format";
 import { loaderFor } from "@/lib/media";
 import { useInView } from "@/lib/useInView";
@@ -62,7 +62,7 @@ export default function Lookbook({
   const name = (item: PortfolioItem) => item.title[lang];
   const serviceName = (item: PortfolioItem) => item.service?.name[lang] ?? "";
   const price = (item: PortfolioItem) =>
-    item.service ? `${item.service.priceFrom ? `${t.servicesFrom} ` : ""}${czk(item.service.price)} Kč` : "";
+    item.service ? `${startsFrom(item.service) ? `${t.servicesFrom} ` : ""}${czk(item.service.price)} Kč` : "";
 
   const bookLook = (item: PortfolioItem) => {
     onBook(item.category, `${t.lookStyle}: ${name(item)}${item.service ? ` (${serviceName(item)})` : ""}`);

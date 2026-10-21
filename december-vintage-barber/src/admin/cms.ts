@@ -2,6 +2,8 @@
 
 export type Category = "women" | "men" | "kids" | "spa";
 export const CATEGORIES: Category[] = ["women", "men", "kids", "spa"];
+export type HairLength = "short" | "medium" | "long";
+export const HAIR_LENGTHS: HairLength[] = ["short", "medium", "long"];
 export type MediaKind = "image" | "video";
 
 export interface MediaRef {
@@ -83,6 +85,8 @@ export interface ServiceAdmin {
   durationMin: number;
   priceCzk: number;
   priceFrom: boolean;
+  /** CZK by hair length; the API keeps priceCzk equal to the short one */
+  lengthPrices: Record<HairLength, number> | null;
   image: MediaRef | null;
   isPublished: boolean;
   sortOrder: number;

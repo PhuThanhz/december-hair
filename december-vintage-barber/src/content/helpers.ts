@@ -1,7 +1,13 @@
-import type { Branch, Service } from "./types";
+import type { Branch, HairLength, Service } from "./types";
 
 export const findBranch = (branches: Branch[], id?: string | null) => (id ? branches.find((b) => b.id === id) : undefined);
 export const findService = (services: Service[], id?: string | null) => (id ? services.find((s) => s.id === id) : undefined);
 
 export const directionsUrl = (b: Branch) =>
   `https://www.google.com/maps/dir/?api=1&destination=${b.coords[1]},${b.coords[0]}`;
+
+/** What a service costs for a hair length (most services have one price) */
+export const priceFor = (s: Service, length: HairLength) => s.lengthPrices?.[length] ?? s.price;
+
+/** Shown with "od": a starting price, or one that depends on the hair length */
+export const startsFrom = (s: Service) => s.priceFrom || !!s.lengthPrices;
