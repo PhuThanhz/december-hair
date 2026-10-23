@@ -188,6 +188,10 @@ export default function Header({
     setOpen(false);
     window.setTimeout(() => goTo(href), 120);
   };
+  const bookFromMenu = () => {
+    setOpen(false);
+    onBook();
+  };
 
   return (
     <>
@@ -302,7 +306,8 @@ export default function Header({
             </button>
           </div>
 
-          <div className="flex-1 grid grid-cols-12 lg:gap-x-8 gap-y-12 content-center py-10">
+          {/* On a phone everything fits one screen: short links, one line per salon, booking pinned below */}
+          <div className="flex-1 grid grid-cols-12 lg:gap-x-8 gap-y-6 lg:gap-y-12 content-center py-4 lg:py-10">
             {/* Where to go, each with the one fact that helps decide */}
             <nav className="col-span-12 lg:col-span-7">
               <ul>
@@ -312,14 +317,14 @@ export default function Header({
                       href={l.href}
                       data-menu-link
                       onClick={(e) => go(e, l.href)}
-                      className="group grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-4 py-4 sm:py-5"
+                      className="group grid grid-cols-[2.5rem_1fr_auto] items-center gap-x-4 py-3 sm:py-5"
                     >
                       <span className="label text-sage tabular-nums">0{i + 1}</span>
                       <span className="min-w-0">
-                        <span className="block font-serif text-4xl sm:text-5xl leading-none tracking-[-0.02em] text-paper/70 transition-colors duration-300 group-hover:text-paper">
+                        <span className="block font-serif text-[2rem] sm:text-5xl leading-none tracking-[-0.02em] text-paper/70 transition-colors duration-300 group-hover:text-paper">
                           {l.label}
                         </span>
-                        <span className="mt-2 block text-sm text-paper/45 transition-colors duration-300 group-hover:text-sage">
+                        <span className="mt-2 hidden sm:block text-sm text-paper/45 transition-colors duration-300 group-hover:text-sage">
                           {hint(l.href)}
                         </span>
                       </span>
@@ -337,22 +342,33 @@ export default function Header({
 
             {/* The salons: open right now? one tap to call */}
             <div className="col-span-12 lg:col-span-4 lg:col-start-9 self-center">
-              <p data-menu-fade className="label text-sage mb-4">{t.menuContact}</p>
+              <p data-menu-fade className="label text-sage mb-2 lg:mb-4">{t.menuContact}</p>
               <ul className="divide-y divide-paper/10 border-y border-paper/10">
                 {branches.map((b) => {
                   const st = status[b.id];
+                  const stText = st ? (st.open ? t.menuOpenNow : t.menuClosedNow).replace("{time}", st.time) : "";
                   return (
-                    <li key={b.id} data-menu-fade className="py-4">
-                      <div className="flex items-baseline justify-between gap-4">
-                        <span className="font-serif text-2xl">{b.city[lang]}</span>
+                    <li key={b.id} data-menu-fade className="py-3 lg:py-4">
+                      <div className="flex items-center lg:items-baseline justify-between gap-4">
+                        <span className="flex min-w-0 items-center gap-2.5 font-serif text-xl lg:text-2xl">
+                          {/* Phones: open or closed as a dot only */}
+                          {st && (
+                            <span aria-hidden className={`lg:hidden w-1.5 h-1.5 shrink-0 rounded-full ${st.open ? "bg-sage" : "bg-paper/30"}`} />
+                          )}
+                          <span className="truncate">{b.city[lang]}</span>
+                          {st && <span className="sr-only lg:hidden">, {stText}</span>}
+                        </span>
                         {st && (
-                          <span className={`flex items-center gap-2 text-xs ${st.open ? "text-sage" : "text-paper/50"}`}>
+                          <span className={`hidden lg:flex items-center gap-2 text-xs ${st.open ? "text-sage" : "text-paper/50"}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${st.open ? "bg-sage" : "bg-paper/30"}`} />
-                            {(st.open ? t.menuOpenNow : t.menuClosedNow).replace("{time}", st.time)}
+                            {stText}
                           </span>
                         )}
+                        <a href={`tel:${b.phoneRaw}`} className="lg:hidden shrink-0 tabular-nums text-sm text-paper/80 hover:text-paper">
+                          {b.phone}
+                        </a>
                       </div>
-                      <div className="mt-1 flex items-baseline justify-between gap-4 text-sm text-paper/55">
+                      <div className="mt-1 hidden lg:flex items-baseline justify-between gap-4 text-sm text-paper/55">
                         <span className="truncate">{b.mall}</span>
                         <a href={`tel:${b.phoneRaw}`} className="shrink-0 tabular-nums text-paper/80 hover:text-paper">
                           {b.phone}
@@ -364,27 +380,36 @@ export default function Header({
               </ul>
               <button
                 data-menu-fade
-                onClick={() => {
-                  setOpen(false);
-                  onBook();
-                }}
-                className="mt-8 w-full cursor-pointer rounded-full bg-paper text-forest py-4 text-sm font-medium hover:bg-sage transition-colors duration-300"
+                onClick={bookFromMenu}
+                className="hidden lg:block mt-8 w-full cursor-pointer rounded-full bg-paper text-forest py-4 text-sm font-medium hover:bg-sage transition-colors duration-300"
               >
                 {t.book} →
               </button>
             </div>
           </div>
 
-          <div data-menu-fade className="flex items-center justify-between gap-6 border-t border-paper/10 py-6 text-sm">
-            <div className="flex items-center gap-6">
-              <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="link-line">
-                Instagram ↗
-              </a>
-              <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="link-line">
-                Facebook ↗
-              </a>
+          {/* Phones: pinned to the bottom, so booking and the language never need a scroll */}
+          <div
+            data-menu-fade
+            className="sticky lg:static bottom-0 -mx-5 sm:-mx-8 lg:mx-0 px-5 sm:px-8 lg:px-0 bg-forest border-t border-paper/10 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:py-6 text-sm"
+          >
+            <button
+              onClick={bookFromMenu}
+              className="lg:hidden mb-4 w-full cursor-pointer rounded-full bg-paper text-forest py-3.5 text-sm font-medium hover:bg-sage transition-colors duration-300"
+            >
+              {t.book} →
+            </button>
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="link-line">
+                  Instagram ↗
+                </a>
+                <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="link-line">
+                  Facebook ↗
+                </a>
+              </div>
+              <LangSwitch lang={lang} setLang={setLang} dark />
             </div>
-            <LangSwitch lang={lang} setLang={setLang} dark />
           </div>
         </div>
       </div>

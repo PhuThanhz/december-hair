@@ -8,12 +8,15 @@ import { czk as fmt, mins } from "@/lib/format";
 import { gsap, useGSAP, EASE, MQ_MOTION } from "@/lib/gsap";
 
 const hm = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}` : `${m} min`);
+// Rows fade in group by group only where every group is on the page (below lg one tab shows at a time)
+const MQ_WIDE_MOTION = `(min-width: 1024px) and ${MQ_MOTION}`;
 
 /**
  * "Build your visit": tick the services you want and a receipt prints beside
  * the list with the total price and time in the chair, ready to book.
  * Driven entirely by the services in the content, so the back office can add or change rows freely.
  * Services priced by hair length follow the length picked above the list.
+ * Below lg the groups are tabs, so a phone shows one short list instead of the whole price list.
  */
 export default function PriceList({
   t,
@@ -40,6 +43,10 @@ export default function PriceList({
   const time = chosen.reduce((sum, s) => sum + s.durationMin, 0);
   const fromPrice = chosen.some((s) => s.priceFrom);
   const groups = CATEGORIES.map((c) => ({ cat: c, items: services.filter((s) => s.category === c) })).filter((g) => g.items.length);
+  const [tab, setTab] = useState<Category | null>(null);
+  const active = groups.find((g) => g.cat === tab) ?? groups[0];
+  // On a phone the hair length only matters for the tab on screen
+  const lengthInTab = !!active?.items.some((s) => s.lengthPrices);
   const name = (s: Service) => s.name[lang];
   // What the salon reads in the booking: the hair length too, where it sets the price
   const booked = (s: Service) => (s.lengthPrices ? `${name(s)} (${t.hairLength.toLowerCase()}: ${lengthName.toLowerCase()})` : name(s));
@@ -64,6 +71,8 @@ export default function PriceList({
           { autoAlpha: 0, y: 32 },
           { autoAlpha: 1, y: 0, duration: 1.2, ease: "power3.out", scrollTrigger: { trigger: "[data-receipt]", start: "top 85%" } }
         );
+      });
+      mm.add(MQ_WIDE_MOTION, () => {
         gsap.utils.toArray<HTMLElement>("[data-group]").forEach((g) => {
           gsap.fromTo(
             g.querySelectorAll("[data-row]"),
@@ -122,9 +131,39 @@ export default function PriceList({
 
         <div className="mt-16 sm:mt-20 grid grid-cols-12 lg:gap-x-10 xl:gap-x-20 gap-y-14 items-start">
           {/* The menu: tap a row to add or remove it */}
-          <div className="col-span-12 lg:col-span-7 space-y-12">
+          <div className="col-span-12 lg:col-span-7 space-y-6 lg:space-y-12">
+            {/* Phones: one group at a time */}
+            {groups.length > 1 && (
+              <div
+                role="group"
+                aria-label={t.pricesTitle}
+                className="lg:hidden sticky top-16 z-20 -mx-5 sm:-mx-8 px-5 sm:px-8 py-3 bg-paper/95 backdrop-blur-md flex gap-2 overflow-x-auto [scrollbar-width:none]"
+              >
+                {groups.map((g) => {
+                  const on = g.cat === active?.cat;
+                  const count = g.items.filter((s) => picked.includes(s.id)).length;
+                  return (
+                    <button
+                      key={g.cat}
+                      aria-pressed={on}
+                      onClick={() => setTab(g.cat)}
+                      className={`shrink-0 cursor-pointer rounded-full border px-4 py-2 text-sm transition-colors duration-300 ${
+                        on ? "bg-forest border-forest text-paper" : "border-ink/20 text-ink-soft hover:text-ink"
+                      }`}
+                    >
+                      {t.cat[g.cat]}
+                      {count > 0 && <span className={`ml-1.5 tabular-nums ${on ? "text-paper/70" : "text-forest"}`}>· {count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {byLength && (
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-3" role="radiogroup" aria-label={t.hairLength}>
+              <div
+                className={`flex-wrap items-center gap-x-5 gap-y-3 ${lengthInTab ? "flex" : "hidden lg:flex"}`}
+                role="radiogroup"
+                aria-label={t.hairLength}
+              >
                 <span className="label text-ink-soft">{t.hairLength}</span>
                 <div className="inline-flex rounded-full border border-ink/20 p-1">
                   {HAIR_LENGTHS.map((len, i) => (
@@ -144,8 +183,8 @@ export default function PriceList({
               </div>
             )}
             {groups.map((g, gi) => (
-              <div key={g.cat} data-group>
-                <div className="flex items-baseline gap-4 border-b border-ink pb-3">
+              <div key={g.cat} data-group className={g.cat === active?.cat ? "" : "hidden lg:block"}>
+                <div className="hidden lg:flex items-baseline gap-4 border-b border-ink pb-3">
                   <span className="label text-ink-soft tabular-nums">{String(gi + 1).padStart(2, "0")}</span>
                   <h3 className="font-serif text-3xl sm:text-4xl leading-none">{t.cat[g.cat]}</h3>
                 </div>
@@ -157,12 +196,12 @@ export default function PriceList({
                         <button
                           onClick={() => toggle(s.id)}
                           aria-pressed={on}
-                          className={`group w-full text-left cursor-pointer px-3 sm:px-4 py-5 grid grid-cols-[auto_1fr] gap-x-4 sm:gap-x-5 transition-colors duration-300 ${
+                          className={`group w-full text-left cursor-pointer px-3 sm:px-4 py-3.5 lg:py-5 grid grid-cols-[auto_1fr] gap-x-3.5 sm:gap-x-5 transition-colors duration-300 ${
                             on ? "bg-celadon/45" : "hover:bg-bone/50"
                           }`}
                         >
                           <span
-                            className={`mt-2 grid place-items-center w-[18px] h-[18px] border transition-colors duration-300 ${
+                            className={`mt-1 lg:mt-2 grid place-items-center w-[18px] h-[18px] border transition-colors duration-300 ${
                               on ? "bg-forest border-forest text-paper" : "border-ink/30 group-hover:border-ink"
                             }`}
                             aria-hidden
@@ -175,17 +214,17 @@ export default function PriceList({
                           </span>
                           <span className="min-w-0">
                             <span className="flex items-baseline gap-3">
-                              <span className={`font-serif text-2xl sm:text-[1.75rem] leading-tight ${on ? "text-forest" : ""}`}>
+                              <span className={`font-serif text-lg sm:text-2xl lg:text-[1.75rem] leading-tight ${on ? "text-forest" : ""}`}>
                                 {name(s)}
                               </span>
                               <span className="leader" aria-hidden />
-                              <span className="price text-lg sm:text-xl">
+                              <span className="price text-base sm:text-lg lg:text-xl whitespace-nowrap">
                                 {s.priceFrom && <span className="text-xs font-normal text-ink-soft mr-1">{t.servicesFrom}</span>}
                                 {fmt(priceFor(s, length))} Kč
                               </span>
                             </span>
-                            <span className="mt-1.5 flex justify-between gap-4 text-sm text-ink-soft">
-                              <span>{[s.note[lang], s.lengthPrices && lengthName].filter(Boolean).join(" · ")}</span>
+                            <span className="mt-1 lg:mt-1.5 flex justify-between gap-4 text-xs sm:text-sm text-ink-soft">
+                              <span>{s.note[lang]}</span>
                               <span className="tabular-nums whitespace-nowrap">{mins(s.durationMin)}</span>
                             </span>
                           </span>
