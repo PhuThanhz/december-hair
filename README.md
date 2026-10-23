@@ -20,10 +20,10 @@ Website cho salon December Hair (Praha · Kladno · Mladá Boleslav), viết b�
 ## ⚙️ Backend + admin (`/admin`)
 Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/EN, ảnh/video) nằm trong database của backend, repo riêng: **https://github.com/tiendung4411/december_hair_be** (FastAPI + PostgreSQL, hướng dẫn EN/CZ trong README của repo đó). Site đọc `GET /api/v1/public/content`; backend gọi `POST /api/revalidate` của site sau mỗi lần lưu trong admin. **Nếu backend không chạy, site vẫn chạy** bằng nội dung có sẵn trong `src/app/data.ts` (chỉ `/admin` là không dùng được).
 
-- **Chạy cùng backend (dev):** clone hai repo cạnh nhau:
+- **Chạy cùng backend (dev):** clone backend cạnh repo này, hoặc ngay bên trong nó (`december_hair_be/` đã có trong `.gitignore`):
   ```
   december-hair/       ← repo này (site + /admin)
-  december_hair_be/    ← backend
+  december_hair_be/    ← backend (hoặc december-hair/december_hair_be/)
   ```
   1. Trong `december_hair_be`: `cp .env.example .env`, đặt `JWT_SECRET`, một `REVALIDATE_SECRET` và `NEXT_INTERNAL_URL=http://host.docker.internal:3004`, rồi:
      ```bash
@@ -40,8 +40,8 @@ Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/E
 - Trong component, lấy dữ liệu bằng `useContent()` (chi nhánh, dịch vụ, reels…) và `t` (text) thay vì import `BRANCHES`, `SERVICES`, `REELS`… từ `data.ts`. Kiểu dữ liệu: `src/content/types.ts`.
 - **Thêm text mới:** thêm key vào cả `cs` và `en` trong `T` (`data.ts`). Site hiện ngay giá trị trong `data.ts` (log server báo key nào CMS chưa có). Để sửa được trong admin, đưa key vào database:
   ```bash
-  cd december-vintage-barber && npm run export:content          # ghi ../../december_hair_be/seed/content.json
-  cd ../../december_hair_be && docker compose exec -T api python -m app.cli sync-texts - < seed/content.json
+  cd december-vintage-barber && npm run export:content          # ghi seed/content.json của december_hair_be (tự tìm cả hai chỗ)
+  cd <thư mục december_hair_be> && docker compose exec -T api python -m app.cli sync-texts - < seed/content.json
   ```
   Xoá key khỏi code thì thêm `--prune`. Giá trị đã sửa trong admin được giữ nguyên.
 - Thêm **trường dữ liệu mới** (vd. một thuộc tính của chi nhánh) là thay đổi ở cả hai repo: báo người làm backend.
