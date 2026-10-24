@@ -4,12 +4,12 @@ Website cho salon December Hair (Praha · Kladno · Mladá Boleslav), viết b�
 
 ---
 
-## 💈 december-vintage-barber
+## 💈 december_hair_fe
 - **Phong cách:** editorial xanh rêu – trắng, lấy tông từ tường salon thật.
 - **Tính năng chính:** cảnh mở đầu 3 video, "Pro celou rodinu" (5 tấm gương theo từng nhóm khách), bảng giá tự tính tổng tiền & thời gian rồi đặt lịch, lookbook, reels, bản đồ 3 chi nhánh (Mapa / ảnh Letecká ČÚZK, nút Google Maps), poukaz.
 - **Khởi chạy:**
   ```bash
-  cd december-vintage-barber
+  cd december_hair_fe
   npm install
   npm run dev
   # Mở tại: http://localhost:3004
@@ -31,7 +31,7 @@ Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/E
      docker compose exec api python -m app.cli create-admin --email you@example.com --name "Your Name"
      docker compose exec api python -m app.cli seed seed/content.json --public seed/media
      ```
-  2. Trong `december-vintage-barber`: `cp .env.example .env.local`, đặt `API_URL=http://localhost:8000/api/v1` và **cùng** `REVALIDATE_SECRET`, rồi `npm run dev`.
+  2. Trong `december_hair_fe`: `cp .env.example .env.local`, đặt `API_URL=http://localhost:8000/api/v1` và **cùng** `REVALIDATE_SECRET`, rồi `npm run dev`.
   3. Site: http://localhost:3004 · Admin: http://localhost:3004/admin (luôn đăng nhập qua cổng 3004, không qua 8000).
 - **URL:** `/` tiếng Séc, `/en` tiếng Anh, `/cs…` chuyển về `/…`. Ảnh/video CMS nằm ở `/media/…` (dev: Next chuyển tiếp sang backend).
 
@@ -40,7 +40,7 @@ Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/E
 - Trong component, lấy dữ liệu bằng `useContent()` (chi nhánh, dịch vụ, reels…) và `t` (text) thay vì import `BRANCHES`, `SERVICES`, `REELS`… từ `data.ts`. Kiểu dữ liệu: `src/content/types.ts`.
 - **Thêm text mới:** thêm key vào cả `cs` và `en` trong `T` (`data.ts`). Site hiện ngay giá trị trong `data.ts` (log server báo key nào CMS chưa có). Để sửa được trong admin, đưa key vào database:
   ```bash
-  cd december-vintage-barber && npm run export:content          # ghi seed/content.json của december_hair_be (tự tìm cả hai chỗ)
+  cd december_hair_fe && npm run export:content          # ghi seed/content.json của december_hair_be (tự tìm cả hai chỗ)
   cd <thư mục december_hair_be> && docker compose exec -T api python -m app.cli sync-texts - < seed/content.json
   ```
   Xoá key khỏi code thì thêm `--prune`. Giá trị đã sửa trong admin được giữ nguyên.

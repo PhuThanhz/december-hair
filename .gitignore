@@ -11,6 +11,8 @@ _backup-*/
 
 # Secrets
 .env*
+cookies.txt
+*.cookie
 
 # OS / tools
 .DS_Store
