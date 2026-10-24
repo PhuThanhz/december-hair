@@ -364,6 +364,7 @@ const cs = {
   formDate: "Datum",
   formNote: "Poznámka",
   formSubmit: "Odeslat",
+  formCall: "Raději zavolat?",
   formDoneTitle: "Děkujeme.",
   formDone: "Rezervaci jsme přijali. Brzy se vám ozveme.",
 };
@@ -496,6 +497,7 @@ const en: Dict = {
   formDate: "Date",
   formNote: "Note",
   formSubmit: "Send",
+  formCall: "Rather call?",
   formDoneTitle: "Thank you.",
   formDone: "We've received your request and will be in touch soon.",
 };

@@ -57,6 +57,7 @@ const en = {
     submit: "Sign in",
     wrong: "Incorrect email or password.",
     tooMany: "Too many attempts. Wait a minute and try again.",
+    backToSite: "Back to the website",
   },
 
   dash: {
@@ -170,6 +171,7 @@ const cs: AdminDict = {
     submit: "Přihlásit",
     wrong: "Nesprávný e-mail nebo heslo.",
     tooMany: "Příliš mnoho pokusů. Počkejte minutu a zkuste to znovu.",
+    backToSite: "Zpět na web",
   },
 
   dash: {

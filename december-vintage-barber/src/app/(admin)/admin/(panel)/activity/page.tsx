@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "@/admin/api";
 import type { AuditEntry } from "@/admin/cms";
-import { formatDate } from "@/admin/i18n";
 import { useAdminT, useMe } from "@/admin/Providers";
-import { Alert, Badge, Button, PageHeader, Select } from "@/admin/ui";
+import { Alert, Button, PageHeader } from "@/admin/ui";
+import { EmptyList, FilterBar } from "@/admin/collection";
 
 const ENTITIES = ["branch", "service", "look", "reel", "panel", "texts", "site_media", "page", "media", "settings", "user"];
 
@@ -23,6 +23,8 @@ export default function ActivityPage() {
   const { data: me } = useMe();
   const [entity, setEntity] = useState("");
   const [limit, setLimit] = useState(50);
+  // The day the page was opened, for "Today" and "Yesterday"
+  const [now] = useState(() => Date.now());
   const isAdmin = me?.role === "admin";
   const { data: rows = [], error, isFetching } = useQuery({
     queryKey: ["audit", entity, limit],
@@ -33,55 +35,74 @@ export default function ActivityPage() {
   if (!me) return null;
   if (!isAdmin) return <Alert>{t.notAllowed}</Alert>;
   const a = t.cms.activity;
+  const log = t.cms.ui.log;
+
+  // Newest first, grouped by day ("Today", "Yesterday", then the date)
+  const dayKey = (iso: string) => new Date(iso).toDateString();
+  const today = new Date(now);
+  const yesterday = new Date(now - 864e5);
+  const dayLabel = (iso: string) => {
+    const k = dayKey(iso);
+    if (k === today.toDateString()) return log.today;
+    if (k === yesterday.toDateString()) return log.yesterday;
+    return new Date(iso).toLocaleDateString(lang === "cs" ? "cs-CZ" : "en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  };
+  const days: { label: string; rows: AuditEntry[] }[] = [];
+  for (const r of rows) {
+    const label = dayLabel(r.createdAt);
+    if (days.at(-1)?.label === label) days.at(-1)!.rows.push(r);
+    else days.push({ label, rows: [r] });
+  }
+  const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === "cs" ? "cs-CZ" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  const tone: Record<string, string> = {
+    create: "bg-moss text-paper",
+    upload: "bg-moss text-paper",
+    delete: "bg-red-700 text-white",
+    update: "bg-forest text-paper",
+    reorder: "bg-bone text-ink",
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={a.title}
-        lead={a.lead}
-        actions={
-          <Select aria-label={a.what} value={entity} onChange={(e) => setEntity(e.target.value)} className="w-48">
-            <option value="">{t.cms.media.all}</option>
-            {ENTITIES.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </Select>
-        }
+      <PageHeader title={a.title} lead={a.lead} />
+      <FilterBar<string>
+        value={entity || "all"}
+        onChange={(e) => setEntity(e === "all" ? "" : e)}
+        options={[{ key: "all", label: t.cms.media.all }, ...ENTITIES.map((e) => ({ key: e, label: log.entities[e] ?? e }))]}
       />
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
-      <div className="overflow-x-auto rounded-2xl border border-ink/10 bg-white/70">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs text-ink-soft border-b border-ink/10">
-            <tr>
-              <th className="px-4 py-3 font-medium">{a.when}</th>
-              <th className="px-4 py-3 font-medium">{a.who}</th>
-              <th className="px-4 py-3 font-medium">{a.what}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/5">
-            {rows.map((r) => (
-              <tr key={r.id} className="align-top">
-                <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-soft">{formatDate(r.createdAt, lang, t.never)}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{r.userName ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <Badge tone={r.action === "delete" ? "warn" : r.action === "create" || r.action === "upload" ? "green" : "neutral"}>{r.action}</Badge>
-                    <span className="font-medium">{r.entity}</span>
-                    {r.entityId && <span className="text-xs text-ink-soft">#{r.entityId}</span>}
-                  </span>
-                  {Object.keys(r.changes).length > 0 && <p className="mt-1 text-xs text-ink-soft break-words">{summary(r.changes)}</p>}
-                </td>
-              </tr>
+
+      {days.map((d) => (
+        <section key={d.label}>
+          <h2 className="label mb-3 text-ink-soft first-letter:uppercase">{d.label}</h2>
+          <ol className="relative space-y-1 border-l border-ink/10 pl-6">
+            {d.rows.map((r) => (
+              <li key={r.id} className="relative rounded-xl px-3 py-2.5 hover:bg-white/70">
+                <span
+                  className={`absolute -left-[2.05rem] top-3 grid h-5 w-5 place-items-center rounded-full text-[10px] font-semibold uppercase ring-4 ring-paper ${tone[r.action] ?? "bg-bone text-ink"}`}
+                  aria-hidden
+                >
+                  {r.action.slice(0, 1)}
+                </span>
+                <p className="flex flex-wrap items-baseline gap-x-1.5 text-sm">
+                  <span className="font-medium">{r.userName ?? "—"}</span>
+                  <span className="text-ink-soft">{log.actions[r.action] ?? r.action}</span>
+                  <span className="font-medium">{log.entities[r.entity] ?? r.entity}</span>
+                  {r.entityId && <span className="text-xs text-ink-soft">#{r.entityId}</span>}
+                  <span className="ml-auto text-xs tabular-nums text-ink-soft">{time(r.createdAt)}</span>
+                </p>
+                {r.action !== "reorder" && Object.keys(r.changes).length > 0 && (
+                  <p className="mt-1 text-xs text-ink-soft break-words">{summary(r.changes)}</p>
+                )}
+              </li>
             ))}
-          </tbody>
-        </table>
-      </div>
-      {!rows.length && !error && <p className="text-sm text-ink-soft">{t.cms.empty}</p>}
+          </ol>
+        </section>
+      ))}
+      {!rows.length && !error && <EmptyList text={t.cms.empty} />}
       {rows.length === limit && limit < 200 && (
         <Button variant="secondary" disabled={isFetching} onClick={() => setLimit((l) => Math.min(200, l + 50))}>
-          {isFetching ? t.loading : "+ 50"}
+          {isFetching ? t.loading : log.more}
         </Button>
       )}
     </div>

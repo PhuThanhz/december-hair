@@ -4,7 +4,7 @@ import type { SpecialDay, WeeklyHours } from "../cms";
 import { useAdminT } from "../Providers";
 import { Button, Input } from "../ui";
 
-const time = "w-28 tabular-nums";
+const time = "w-[5.5rem] sm:w-28 !px-2 sm:!px-3.5 tabular-nums";
 
 /** All seven weekdays, in order, whatever the stored list holds */
 export function fullWeek(hours: WeeklyHours[]): WeeklyHours[] {
@@ -24,18 +24,18 @@ export function WeeklyHoursEditor({ value, onChange }: { value: WeeklyHours[]; o
         <tbody className="divide-y divide-ink/5">
           {value.map((h, i) => (
             <tr key={h.weekday}>
-              <th scope="row" className="py-2 pr-3 text-left font-normal w-28">
+              <th scope="row" className="py-2 pr-2 sm:pr-3 text-left font-normal w-20 sm:w-28">
                 {t.cms.branches.days[h.weekday]}
               </th>
-              <td className="py-2 pr-3">
-                <label className="flex items-center gap-2">
+              <td className="py-2 pr-2 sm:pr-3">
+                <label className="flex items-center gap-2" title={t.cms.branches.closed}>
                   <input type="checkbox" className="h-4 w-4 accent-moss" checked={h.closed} onChange={(e) => set(i, { closed: e.target.checked })} />
-                  {t.cms.branches.closed}
+                  <span className="sr-only sm:not-sr-only">{t.cms.branches.closed}</span>
                 </label>
               </td>
               <td className="py-2">
                 {!h.closed && (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 sm:gap-2">
                     <Input
                       type="time"
                       aria-label={`${t.cms.branches.days[h.weekday]} ${t.cms.branches.opens}`}

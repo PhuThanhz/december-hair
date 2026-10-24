@@ -5,7 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/admin/api";
 import { useAdminT, useMe } from "@/admin/Providers";
 import type { Me, UiLang } from "@/admin/types";
-import { Alert, Button, Card, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { Alert, Button, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { initials, Section } from "@/admin/form-kit";
 
 function ProfileForm({ me }: { me: Me }) {
   const { t, setLang } = useAdminT();
@@ -17,8 +18,7 @@ function ProfileForm({ me }: { me: Me }) {
   });
 
   return (
-    <Card>
-      <h2 className="font-serif text-xl mb-5">{t.account.profile}</h2>
+    <Section title={t.account.profile} help={t.cms.ui.sections.profile}>
       <form
         className="space-y-5"
         onSubmit={(e) => {
@@ -41,11 +41,13 @@ function ProfileForm({ me }: { me: Me }) {
         </Field>
         {profile.isError && <Alert>{profile.error instanceof ApiError ? profile.error.message : t.somethingWrong}</Alert>}
         {profile.isSuccess && <Alert tone="success">{t.saved}</Alert>}
-        <Button type="submit" disabled={profile.isPending || name === me.name}>
-          {profile.isPending ? t.saving : t.save}
-        </Button>
+        <div className="flex justify-end border-t border-ink/10 pt-4">
+          <Button type="submit" disabled={profile.isPending || name === me.name}>
+            {profile.isPending ? t.saving : t.save}
+          </Button>
+        </div>
       </form>
-    </Card>
+    </Section>
   );
 }
 
@@ -64,13 +66,23 @@ export default function AccountPage() {
   if (!me) return null;
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div>
       <PageHeader title={t.account.title} />
+
+      {/* Who is signed in */}
+      <div className="mt-6 flex items-center gap-4 rounded-2xl bg-forest p-5 text-paper sm:p-6">
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-paper font-serif text-xl text-forest">{initials(me.name)}</span>
+        <span className="min-w-0">
+          <span className="block truncate font-serif text-2xl leading-tight">{me.name}</span>
+          <span className="block truncate text-sm text-paper/70">
+            {me.email} · {t.roles[me.role]}
+          </span>
+        </span>
+      </div>
 
       <ProfileForm key={me.id} me={me} />
 
-      <Card>
-        <h2 className="font-serif text-xl mb-5">{t.account.password}</h2>
+      <Section title={t.account.password} help={t.cms.ui.sections.password}>
         <form
           className="space-y-5"
           onSubmit={(e) => {
@@ -91,11 +103,13 @@ export default function AccountPage() {
           </Field>
           {pwError && <Alert>{pwError}</Alert>}
           {password.isSuccess && <Alert tone="success">{t.account.changed}</Alert>}
-          <Button type="submit" disabled={password.isPending}>
-            {password.isPending ? t.saving : t.save}
-          </Button>
+          <div className="flex justify-end border-t border-ink/10 pt-4">
+            <Button type="submit" disabled={password.isPending}>
+              {password.isPending ? t.saving : t.save}
+            </Button>
+          </div>
         </form>
-      </Card>
+      </Section>
     </div>
   );
 }

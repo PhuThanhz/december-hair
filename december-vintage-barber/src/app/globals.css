@@ -96,6 +96,70 @@ body {
 }
 
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes loginDrift {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.12) translate(-1.5%, -1%);
+  }
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+}
+@keyframes toastTimer {
+  to {
+    transform: scaleX(0);
+  }
+}
+/* The sign-in seal opening into the admin's green curtain */
+@keyframes curtainClose {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes curtainOpen {
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+@keyframes curtainMarkIn {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-8deg);
+  }
+}
+@keyframes curtainMarkOut {
+  to {
+    opacity: 0;
+    transform: scale(1.15) translateY(-24px);
+  }
+}
+@keyframes adminRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+@keyframes adminSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+@keyframes panelIn {
+  from {
+    transform: translateX(100%);
+  }
+}
 @keyframes marqueeLeft {
   0% { transform: translate3d(0, 0, 0); }
   100% { transform: translate3d(-50%, 0, 0); }

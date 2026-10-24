@@ -7,6 +7,7 @@ import { formatDate } from "@/admin/i18n";
 import { useAdminT, useMe } from "@/admin/Providers";
 import { ROLES, type AdminUser, type BranchOption, type Role, type UiLang } from "@/admin/types";
 import { Alert, Badge, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { initials } from "@/admin/form-kit";
 
 type Draft = {
   email: string;
@@ -171,47 +172,56 @@ export default function UsersPage() {
       <PageHeader title={t.users.title} lead={t.users.lead} actions={<Button onClick={() => setEditing("new")}>+ {t.users.add}</Button>} />
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
 
-      <div className="overflow-x-auto rounded-2xl border border-ink/10 bg-white/70">
-        <table className="w-full text-sm">
-          <thead className="text-left text-xs text-ink-soft border-b border-ink/10">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t.users.name}</th>
-              <th className="px-4 py-3 font-medium">{t.users.role}</th>
-              <th className="px-4 py-3 font-medium">{t.users.branches}</th>
-              <th className="px-4 py-3 font-medium">{t.users.status}</th>
-              <th className="px-4 py-3 font-medium">{t.users.lastLogin}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink/5">
-            {(users ?? []).map((u) => (
-              <tr key={u.id} className={u.isActive ? "" : "text-ink-soft"}>
-                <td className="px-4 py-3">
-                  <p className="font-medium">
-                    {u.name} {u.id === me.id && <span className="text-xs font-normal text-ink-soft">({t.users.you})</span>}
-                  </p>
-                  <p className="text-xs text-ink-soft">{u.email}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge tone={u.role === "admin" ? "green" : "neutral"}>{t.roles[u.role]}</Badge>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  {u.role === "branch_manager" ? u.branches.map((b) => b.mall).join(", ") : <span className="text-ink-soft">{t.users.allBranches}</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge tone={u.isActive ? "green" : "muted"}>{u.isActive ? t.users.active : t.users.inactive}</Badge>
-                </td>
-                <td className="px-4 py-3 text-xs whitespace-nowrap">{formatDate(u.lastLoginAt, lang, t.never)}</td>
-                <td className="px-4 py-3 text-right">
-                  <Button variant="secondary" onClick={() => setEditing(u)} aria-label={`${t.users.edit}: ${u.name}`}>
-                    {t.edit}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* One row per person; on phones the columns fold under the name */}
+      <ul className="overflow-hidden rounded-2xl border border-ink/10 bg-white/70 divide-y divide-ink/5">
+        <li className="hidden md:grid grid-cols-[minmax(0,1.6fr)_9rem_minmax(0,1fr)_7rem_10rem_auto] gap-4 bg-bone/40 px-5 py-2.5 text-[11px] uppercase tracking-wider text-ink-soft">
+          <span>{t.users.name}</span>
+          <span>{t.users.role}</span>
+          <span>{t.users.branches}</span>
+          <span>{t.users.status}</span>
+          <span>{t.users.lastLogin}</span>
+          <span className="w-16" />
+        </li>
+        {(users ?? []).map((u) => (
+          <li key={u.id}>
+            <button
+              type="button"
+              onClick={() => setEditing(u)}
+              aria-label={`${t.users.edit}: ${u.name}`}
+              className="group grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.6fr)_9rem_minmax(0,1fr)_7rem_10rem_auto] items-center gap-x-4 gap-y-2 px-4 sm:px-5 py-3.5 text-left text-sm transition-colors hover:bg-bone/40"
+            >
+              <span className="col-span-2 md:col-span-1 flex min-w-0 items-center gap-3">
+                <span
+                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-medium ${u.isActive ? "bg-forest text-paper" : "bg-ink/10 text-ink-soft"}`}
+                >
+                  {initials(u.name)}
+                </span>
+                <span className="min-w-0">
+                  <span className={`block truncate font-medium ${u.isActive ? "" : "text-ink-soft line-through decoration-ink/30"}`}>
+                    {u.name} {u.id === me.id && <span className="text-xs font-normal text-ink-soft no-underline">({t.users.you})</span>}
+                  </span>
+                  <span className="block truncate text-xs text-ink-soft">{u.email}</span>
+                </span>
+              </span>
+              <span className="col-start-3 row-start-1 md:col-start-auto md:row-start-auto justify-self-end md:justify-self-start">
+                <Badge tone={u.role === "admin" ? "green" : "neutral"}>{t.roles[u.role]}</Badge>
+              </span>
+              <span className="col-span-3 md:col-span-1 pl-[3.25rem] md:pl-0 text-xs text-ink-soft truncate">
+                {u.role === "branch_manager" ? u.branches.map((b) => b.mall).join(", ") : t.users.allBranches}
+              </span>
+              <span className="hidden md:flex items-center gap-1.5 text-xs">
+                <span className={`h-2 w-2 rounded-full ${u.isActive ? "bg-moss" : "bg-ink/25"}`} />
+                {u.isActive ? t.users.active : t.users.inactive}
+              </span>
+              <span className="col-span-3 md:col-span-1 pl-[3.25rem] md:pl-0 text-xs text-ink-soft tabular-nums">
+                <span className="md:hidden">{t.users.lastLogin}: </span>
+                {formatDate(u.lastLoginAt, lang, t.never)}
+              </span>
+              <span className="hidden md:inline w-16 text-right text-xs font-medium text-ink-soft opacity-0 transition-opacity group-hover:opacity-100">{t.edit} →</span>
+            </button>
+          </li>
+        ))}
+      </ul>
 
       {editing && <UserDialog user={editing} onClose={() => setEditing(null)} />}
     </div>

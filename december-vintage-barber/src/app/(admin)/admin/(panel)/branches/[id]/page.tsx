@@ -27,7 +27,7 @@ export default function BranchPage() {
 
   const title = isNew ? t.cms.branches.newTitle : branch ? `${lang === "cs" ? branch.cityCs : branch.cityEn} · ${branch.mall}` : t.loading;
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <Link href="/admin/branches" className="text-sm text-ink-soft hover:text-ink">
         ← {t.cms.back}
       </Link>

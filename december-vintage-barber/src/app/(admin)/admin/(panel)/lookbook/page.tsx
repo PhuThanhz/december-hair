@@ -7,7 +7,8 @@ import { CATEGORIES, slugify, type Category, type LookAdmin, type MediaRef, type
 import { fmt } from "@/admin/i18n";
 import MediaPicker, { MediaThumb } from "@/admin/MediaPicker";
 import { useAdminT, useMe } from "@/admin/Providers";
-import { Alert, Badge, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { EmptyList, FilterBar, HiddenBadge, ListHint, OrderControls, useDragOrder, useOrder } from "@/admin/collection";
+import { Alert, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
 
 type Draft = {
   slug: string;
@@ -135,57 +136,70 @@ function LookDialog({ look, services, onClose }: { look: LookAdmin | "new"; serv
 export default function LookbookPage() {
   const { t, lang } = useAdminT();
   const { data: me } = useMe();
-  const qc = useQueryClient();
   const [editing, setEditing] = useState<LookAdmin | "new" | null>(null);
+  const [cat, setCat] = useState<Category | "all">("all");
   const canEdit = me?.role === "admin" || me?.role === "editor";
   const { data: looks = [], error } = useQuery({ queryKey: ["looks"], queryFn: () => api<LookAdmin[]>("/admin/looks"), enabled: canEdit });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: () => api<ServiceAdmin[]>("/admin/services"), enabled: canEdit });
+  const order = useOrder<LookAdmin>("looks", "/admin/looks");
+  const drag = useDragOrder((id, target) => order.moveTo(looks, id, target));
   const serviceName = (id: number) => {
     const s = services.find((x) => x.id === id);
     return s ? (lang === "cs" ? s.nameCs : s.nameEn) : "";
   };
 
-  const order = useMutation({
-    mutationFn: (ids: number[]) => api("/admin/looks/order", { method: "PUT", body: { ids } }),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["looks"] }),
-  });
-  const move = (index: number, by: -1 | 1) => {
-    const ids = looks.map((l) => l.id);
-    const to = index + by;
-    if (to < 0 || to >= ids.length) return;
-    [ids[index], ids[to]] = [ids[to], ids[index]];
-    order.mutate(ids);
-  };
-
   if (!me) return null;
   if (!canEdit) return <Alert>{t.notAllowed}</Alert>;
+  const rows = looks.filter((l) => cat === "all" || l.category === cat);
 
   return (
     <div className="space-y-6">
       <PageHeader title={t.cms.looks.title} lead={t.cms.looks.lead} actions={<Button onClick={() => setEditing("new")}>+ {t.cms.looks.add}</Button>} />
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
-      <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-        {looks.map((l, i) => (
-          <li key={l.id} className="flex gap-3 rounded-2xl border border-ink/10 bg-white/70 p-3">
-            <MediaThumb media={l.image} className="h-24 w-24 shrink-0" />
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-medium truncate">{lang === "cs" ? l.titleCs : l.titleEn}</p>
-              <p className="text-xs text-ink-soft truncate">
-                {t.cms.cats[l.category]} · {serviceName(l.serviceId)}
-              </p>
-              <Badge tone={l.isPublished ? "green" : "muted"}>{l.isPublished ? t.cms.published : t.cms.hidden}</Badge>
-              <div className="flex gap-1 pt-1">
-                <Button variant="ghost" aria-label={t.cms.moveUp} disabled={i === 0 || order.isPending} onClick={() => move(i, -1)}>
-                  ↑
-                </Button>
-                <Button variant="ghost" aria-label={t.cms.moveDown} disabled={i === looks.length - 1 || order.isPending} onClick={() => move(i, 1)}>
-                  ↓
-                </Button>
-                <Button variant="secondary" onClick={() => setEditing(l)}>
-                  {t.cms.edit}
-                </Button>
+      <FilterBar<Category>
+        value={cat}
+        onChange={setCat}
+        options={[
+          { key: "all", label: t.cms.list.all, count: looks.length },
+          ...CATEGORIES.map((c) => ({ key: c, label: t.cms.cats[c], count: looks.filter((l) => l.category === c).length })),
+        ]}
+      />
+      <ListHint saving={order.saving} />
+      {looks.length > 0 && !rows.length && <EmptyList text={t.cms.list.noMatch} />}
+      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+        {rows.map((l, i) => (
+          <li
+            key={l.id}
+            {...drag.itemProps(l.id)}
+            className={`group flex flex-col rounded-2xl border border-ink/10 bg-white/70 p-2 transition-[opacity,transform,box-shadow] hover:shadow-[0_12px_30px_-18px_rgba(17,38,26,0.5)] ${drag.state(l.id)}`}
+          >
+            <button type="button" onClick={() => setEditing(l)} aria-label={`${t.cms.edit}: ${lang === "cs" ? l.titleCs : l.titleEn}`} className="relative block cursor-pointer overflow-hidden rounded-xl">
+              <MediaThumb
+                media={l.image}
+                className={`w-full aspect-[4/5] transition-transform duration-500 group-hover:scale-[1.04] ${l.isPublished ? "" : "grayscale opacity-60"}`}
+              />
+              {!l.isPublished && <HiddenBadge className="absolute left-2 top-2" />}
+              <span className="absolute right-2 top-2 rounded-full bg-paper/90 px-2.5 py-1 text-xs font-medium text-ink opacity-0 transition-opacity group-hover:opacity-100">
+                {t.cms.edit}
+              </span>
+            </button>
+            <div className="flex items-start justify-between gap-2 px-1 pt-2.5 pb-2">
+              <div className="min-w-0">
+                <p className="font-medium leading-snug truncate">{lang === "cs" ? l.titleCs : l.titleEn}</p>
+                <p className="mt-0.5 text-xs text-ink-soft truncate">
+                  {t.cms.cats[l.category]} · {serviceName(l.serviceId)}
+                </p>
               </div>
             </div>
+            <OrderControls
+              className="mx-1 mb-1 mt-auto self-start"
+              index={i}
+              first={i === 0}
+              last={i === rows.length - 1}
+              disabled={order.saving}
+              onUp={() => order.moveTo(looks, l.id, rows[i - 1].id)}
+              onDown={() => order.moveTo(looks, l.id, rows[i + 1].id)}
+            />
           </li>
         ))}
       </ul>

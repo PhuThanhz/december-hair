@@ -7,8 +7,9 @@ import { slugify, type MediaRef, type ReelAdmin } from "@/admin/cms";
 import { fmt } from "@/admin/i18n";
 import MediaPicker, { MediaThumb } from "@/admin/MediaPicker";
 import { useAdminT, useMe } from "@/admin/Providers";
+import { EmptyList, HiddenBadge, ListHint, OrderControls, useDragOrder, useOrder } from "@/admin/collection";
 import type { BranchOption } from "@/admin/types";
-import { Alert, Badge, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { Alert, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
 
 type Draft = {
   slug: string;
@@ -147,7 +148,6 @@ function ReelDialog({ reel, branches, onClose }: { reel: ReelAdmin | "new"; bran
 export default function ReelsPage() {
   const { t, lang } = useAdminT();
   const { data: me } = useMe();
-  const qc = useQueryClient();
   const [editing, setEditing] = useState<ReelAdmin | "new" | null>(null);
   const canEdit = me?.role === "admin" || me?.role === "editor";
   const { data: reels = [], error } = useQuery({ queryKey: ["reels"], queryFn: () => api<ReelAdmin[]>("/admin/reels"), enabled: canEdit });
@@ -156,21 +156,11 @@ export default function ReelsPage() {
     queryFn: () => api<BranchOption[]>("/admin/branches/options"),
     enabled: canEdit,
   });
+  const order = useOrder<ReelAdmin>("reels", "/admin/reels");
+  const drag = useDragOrder((id, target) => order.moveTo(reels, id, target));
   const branchName = (id: number | null) => {
     const b = branches.find((x) => x.id === id);
     return b ? b.mall : t.cms.reels.defaultBranch;
-  };
-
-  const order = useMutation({
-    mutationFn: (ids: number[]) => api("/admin/reels/order", { method: "PUT", body: { ids } }),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["reels"] }),
-  });
-  const move = (index: number, by: -1 | 1) => {
-    const ids = reels.map((r) => r.id);
-    const to = index + by;
-    if (to < 0 || to >= ids.length) return;
-    [ids[index], ids[to]] = [ids[to], ids[index]];
-    order.mutate(ids);
   };
 
   if (!me) return null;
@@ -180,30 +170,54 @@ export default function ReelsPage() {
     <div className="space-y-6">
       <PageHeader title={t.cms.reels.title} lead={t.cms.reels.lead} actions={<Button onClick={() => setEditing("new")}>+ {t.cms.reels.add}</Button>} />
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
-      <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      <ListHint saving={order.saving} />
+      {/* Phone-shaped cards, the way the reels look on the site */}
+      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4">
         {reels.map((r, i) => (
-          <li key={r.id} className="flex gap-3 rounded-2xl border border-ink/10 bg-white/70 p-3">
-            <MediaThumb media={r.poster ?? r.video} className="h-28 w-[4.5rem] shrink-0" />
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-medium truncate">{lang === "cs" ? r.tagCs : r.tagEn}</p>
-              <p className="text-xs text-ink-soft line-clamp-2">{lang === "cs" ? r.captionCs : r.captionEn}</p>
-              <p className="text-xs text-ink-soft truncate">{branchName(r.branchId)}</p>
-              <Badge tone={r.isPublished ? "green" : "muted"}>{r.isPublished ? t.cms.published : t.cms.hidden}</Badge>
-              <div className="flex gap-1 pt-1">
-                <Button variant="ghost" aria-label={t.cms.moveUp} disabled={i === 0 || order.isPending} onClick={() => move(i, -1)}>
-                  ↑
-                </Button>
-                <Button variant="ghost" aria-label={t.cms.moveDown} disabled={i === reels.length - 1 || order.isPending} onClick={() => move(i, 1)}>
-                  ↓
-                </Button>
-                <Button variant="secondary" onClick={() => setEditing(r)}>
-                  {t.cms.edit}
-                </Button>
-              </div>
-            </div>
+          <li
+            key={r.id}
+            {...drag.itemProps(r.id)}
+            className={`group flex flex-col rounded-2xl border border-ink/10 bg-white/70 p-2 transition-[opacity,transform,box-shadow] hover:shadow-[0_12px_30px_-18px_rgba(17,38,26,0.5)] ${drag.state(r.id)}`}
+          >
+            <button
+              type="button"
+              onClick={() => setEditing(r)}
+              aria-label={`${t.cms.edit}: ${lang === "cs" ? r.tagCs : r.tagEn}`}
+              className="relative block cursor-pointer overflow-hidden rounded-[1.1rem] bg-forest"
+            >
+              <MediaThumb
+                media={r.poster ?? r.video}
+                className={`w-full aspect-[9/16] transition-transform duration-500 group-hover:scale-[1.04] ${r.isPublished ? "" : "grayscale opacity-60"}`}
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
+              <span className="absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-paper backdrop-blur">
+                {lang === "cs" ? r.tagCs : r.tagEn}
+              </span>
+              {!r.isPublished && <HiddenBadge className="absolute left-2 top-9" />}
+              <span className="absolute inset-x-2.5 bottom-2.5 text-left font-serif italic text-[15px] leading-snug text-paper line-clamp-3">
+                {lang === "cs" ? r.captionCs : r.captionEn}
+              </span>
+            </button>
+            <p className="mt-2.5 flex items-center gap-1.5 px-1 text-xs text-ink-soft">
+              <svg aria-hidden viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M8 14s4.5-4.2 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.8 8 14 8 14Z" />
+                <circle cx="8" cy="6.5" r="1.6" />
+              </svg>
+              <span className="truncate">{branchName(r.branchId)}</span>
+            </p>
+            <OrderControls
+              className="mx-1 mb-1 mt-2 self-start"
+              index={i}
+              first={i === 0}
+              last={i === reels.length - 1}
+              disabled={order.saving}
+              onUp={() => order.moveTo(reels, r.id, reels[i - 1].id)}
+              onDown={() => order.moveTo(reels, r.id, reels[i + 1].id)}
+            />
           </li>
         ))}
       </ul>
+      {!reels.length && !error && <EmptyList text={t.cms.empty} />}
       {editing && <ReelDialog reel={editing} branches={branches} onClose={() => setEditing(null)} />}
     </div>
   );

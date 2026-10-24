@@ -103,6 +103,71 @@ export function Alert({ tone = "error", children }: { tone?: "error" | "success"
   );
 }
 
+/**
+ * A message that drops in at the top of the screen and leaves by itself.
+ * Change `id` to show the same message again (e.g. a second failed sign-in).
+ */
+export function Toast({
+  tone = "error",
+  message,
+  id,
+  onClose,
+  closeLabel,
+  duration = 5000,
+  className,
+}: {
+  tone?: "error" | "success";
+  message: string | null;
+  id?: number;
+  onClose: () => void;
+  closeLabel: string;
+  duration?: number;
+  /** Extra classes for the full-width strip, e.g. to center it over one column */
+  className?: string;
+}) {
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => close.current(), duration);
+    return () => clearTimeout(timer);
+  }, [message, id, duration]);
+
+  if (!message) return null;
+  return (
+    <div className={cx("pointer-events-none fixed inset-x-0 top-0 z-[300] flex justify-center px-4 pt-4 sm:pt-6", className)}>
+      <div
+        key={id}
+        role={tone === "error" ? "alert" : "status"}
+        className={cx(
+          "pointer-events-auto relative overflow-hidden w-full max-w-md flex items-start gap-3 rounded-2xl pl-4 pr-2 py-3 shadow-[0_18px_50px_-12px_rgba(17,38,26,0.45)] motion-safe:animate-[toastIn_0.45s_cubic-bezier(0.22,1,0.36,1)]",
+          tone === "error" ? "bg-[#7a1f1f] text-paper" : "bg-forest text-paper"
+        )}
+      >
+        <span aria-hidden className="mt-0.5 grid place-items-center shrink-0 w-5 h-5 rounded-full bg-paper/15 text-xs font-semibold">
+          {tone === "error" ? "!" : "✓"}
+        </span>
+        <p className="flex-1 text-sm leading-snug pt-0.5">{message}</p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={closeLabel}
+          className="cursor-pointer shrink-0 w-7 h-7 grid place-items-center rounded-full text-paper/70 hover:text-paper hover:bg-paper/10 transition-colors"
+        >
+          ✕
+        </button>
+        <span
+          aria-hidden
+          className="absolute left-4 right-4 bottom-0 h-[2px] origin-left rounded-full bg-paper/30 motion-safe:animate-[toastTimer_linear_forwards]"
+          style={{ animationDuration: `${duration}ms` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function PageHeader({ title, lead, actions }: { title: string; lead?: string; actions?: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-ink/10">

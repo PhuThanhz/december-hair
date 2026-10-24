@@ -212,7 +212,7 @@ export default function Reels({
   if (!N) return null;
 
   return (
-    <section ref={root} className="relative z-10 bg-[#08100a] text-paper overflow-hidden py-16 sm:py-24 lg:py-28 border-t border-paper/10">
+    <section ref={root} className="relative z-10 bg-forest text-paper overflow-hidden py-16 sm:py-24 lg:py-28 border-t border-paper/10">
       {/* Ambient Luxury Lighting (Pure subtle deep forest green, no yellow) */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[1200px] h-[650px] bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(63,107,44,0.15),transparent_70%)] z-0" />
 
@@ -371,8 +371,8 @@ export default function Reels({
           </div>
 
           {/* Edge feathering so the flank arrows sit on calm ground */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-24 bg-gradient-to-r from-[#08100a] to-transparent z-10" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-24 bg-gradient-to-l from-[#08100a] to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-24 bg-gradient-to-r from-forest to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-24 bg-gradient-to-l from-forest to-transparent z-10" />
 
           {/* Flank arrows (left: previous, right: next) */}
           {([
@@ -388,7 +388,7 @@ export default function Reels({
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => goTo(slot.current + a.dir)}
                   aria-label={a.label}
-                  className="cursor-pointer w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center border border-white/20 bg-black/40 backdrop-blur-md text-paper hover:bg-paper hover:text-[#08100a] hover:border-paper shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] transition-colors duration-300 active:scale-95"
+                  className="cursor-pointer w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center border border-white/20 bg-black/40 backdrop-blur-md text-paper hover:bg-paper hover:text-forest hover:border-paper shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] transition-colors duration-300 active:scale-95"
                 >
                   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.4">
                     <path strokeLinecap="round" strokeLinejoin="round" d={a.d} />

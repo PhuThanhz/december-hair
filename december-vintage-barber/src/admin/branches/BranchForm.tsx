@@ -8,7 +8,8 @@ import { slugify, type BranchAdmin, type MediaRef } from "../cms";
 import { fmt } from "../i18n";
 import MediaPicker from "../MediaPicker";
 import { useAdminT } from "../Providers";
-import { Alert, Button, Card, Checkbox, Field, Input } from "../ui";
+import { Alert, Button, Field, Input } from "../ui";
+import { SaveBar, Section } from "../form-kit";
 import { fullWeek, SpecialDaysEditor, WeeklyHoursEditor } from "./HoursEditor";
 import MapPreview from "./MapPreview";
 
@@ -45,17 +46,21 @@ export default function BranchForm({ id, initial, isEditor }: { id: number | nul
   const router = useRouter();
   const qc = useQueryClient();
   const [d, setD] = useState<BranchDraft>({ ...initial, hours: fullWeek(initial.hours) });
+  // What is saved on the server, to tell whether there is anything to save
+  const [base, setBase] = useState<BranchDraft>(d);
+  const dirty = id === null || JSON.stringify(d) !== JSON.stringify(base);
   const set = (patch: Partial<BranchDraft>) => setD((prev) => ({ ...prev, ...patch }));
   const b = t.cms.branches;
 
   const save = useMutation({
-    mutationFn: () => {
-      const { image, slug, isPublished, ...rest } = d;
-      const body = { ...rest, email: d.email || null, imageId: image?.id ?? null };
-      if (id === null) return api<BranchAdmin>("/admin/branches", { method: "POST", body: { ...body, slug: slug || slugify(d.mall || d.cityCs) } });
+    mutationFn: (draft: BranchDraft) => {
+      const { image, slug, isPublished, ...rest } = draft;
+      const body = { ...rest, email: draft.email || null, imageId: image?.id ?? null };
+      if (id === null) return api<BranchAdmin>("/admin/branches", { method: "POST", body: { ...body, slug: slug || slugify(draft.mall || draft.cityCs) } });
       return api<BranchAdmin>(`/admin/branches/${id}`, { method: "PATCH", body: isEditor ? { ...body, slug, isPublished } : body });
     },
-    onSuccess: (saved) => {
+    onSuccess: (saved, draft) => {
+      setBase(draft);
       qc.invalidateQueries({ queryKey: ["branches"] });
       qc.invalidateQueries({ queryKey: ["branch-options"] });
       if (id === null) router.replace(`/admin/branches/${saved.id}`);
@@ -85,40 +90,48 @@ export default function BranchForm({ id, initial, isEditor }: { id: number | nul
 
   return (
     <form
-      className="space-y-6"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate();
+        save.mutate(d);
       }}
     >
       {id !== null && !d.isPublished && <Alert>{b.notPublished}</Alert>}
 
-      <Card>
-        <h2 className="font-serif text-xl mb-5">{b.details}</h2>
+      <Section title={t.cms.ui.sections.name} help={t.cms.ui.sections.nameHelp}>
         <div className="grid gap-4 sm:grid-cols-2">
           {text(`${b.city} · ${t.cms.cs}`, "cityCs", { required: true })}
           {text(`${b.city} · ${t.cms.en}`, "cityEn", { required: true })}
           {text(b.mall, "mall", { required: true })}
           {text(b.shortName, "shortName", { help: b.shortHelp })}
-          {text(`${b.bookAt} · ${t.cms.cs}`, "bookAtCs", { help: b.bookAtHelp })}
-          {text(`${b.bookAt} · ${t.cms.en}`, "bookAtEn")}
-          {text(b.street, "street", { required: true })}
-          <div className="grid grid-cols-[8rem_1fr] gap-3">
-            {text(b.postal, "postalCode")}
-            {text(b.locality, "locality", { required: true })}
-          </div>
-          {text(b.phone, "phone", { required: true, type: "tel" })}
-          {text(b.email, "email", { help: b.emailHelp, type: "email" })}
-          {text(b.googleMaps, "googleMapsUrl", { type: "url" })}
           {isEditor && id === null && text(t.cms.slug, "slug", { help: t.cms.slugHelp })}
         </div>
-        <div className="mt-5">
-          <MediaPicker label={b.photo} kind="image" value={d.image} allowNone onChange={(m) => set({ image: m })} />
-        </div>
-      </Card>
+      </Section>
 
-      <Card>
-        <h2 className="font-serif text-xl mb-5">{b.location}</h2>
+      <Section title={t.cms.ui.sections.booking} help={t.cms.ui.sections.bookingHelp}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {text(`${b.bookAt} · ${t.cms.cs}`, "bookAtCs", { help: b.bookAtHelp })}
+          {text(`${b.bookAt} · ${t.cms.en}`, "bookAtEn")}
+        </div>
+      </Section>
+
+      <Section title={t.cms.ui.sections.contact} help={t.cms.ui.sections.contactHelp}>
+        {text(b.street, "street", { required: true })}
+        <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-3">
+          {text(b.postal, "postalCode")}
+          {text(b.locality, "locality", { required: true })}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {text(b.phone, "phone", { required: true, type: "tel" })}
+          {text(b.email, "email", { help: b.emailHelp, type: "email" })}
+        </div>
+        {text(b.googleMaps, "googleMapsUrl", { type: "url" })}
+      </Section>
+
+      <Section title={t.cms.ui.sections.photo} help={t.cms.ui.sections.photoHelp}>
+        <MediaPicker label={b.photo} kind="image" value={d.image} allowNone onChange={(m) => set({ image: m })} />
+      </Section>
+
+      <Section title={b.location} help={t.cms.ui.sections.mapHelp}>
         <MapPreview
           lat={d.lat}
           lng={d.lng}
@@ -126,44 +139,59 @@ export default function BranchForm({ id, initial, isEditor }: { id: number | nul
           onMove={(p) => set(p)}
           onCamera={(c) => set({ mapBearing: c.bearing, mapZoom: c.zoom, mapPitch: c.pitch })}
         />
-        <div className="mt-4 grid gap-4 grid-cols-2 sm:grid-cols-5">
-          {num(b.lat, "lat", "0.000001")}
-          {num(b.lng, "lng", "0.000001")}
-          {num(b.bearing, "mapBearing", "0.1")}
-          {num(b.zoom, "mapZoom", "0.1")}
-          {num(b.pitch, "mapPitch", "0.1")}
-        </div>
-      </Card>
+        <details className="group rounded-xl border border-ink/10 bg-paper/60 px-4 py-3">
+          <summary className="cursor-pointer text-sm text-ink-soft group-open:mb-3">
+            {b.lat} · {b.lng} · {b.camera}
+          </summary>
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-5">
+            {num(b.lat, "lat", "0.000001")}
+            {num(b.lng, "lng", "0.000001")}
+            {num(b.bearing, "mapBearing", "0.1")}
+            {num(b.zoom, "mapZoom", "0.1")}
+            {num(b.pitch, "mapPitch", "0.1")}
+          </div>
+        </details>
+      </Section>
 
-      <Card>
-        <h2 className="font-serif text-xl mb-4">{b.hours}</h2>
+      <Section title={b.hours} help={t.cms.ui.sections.hoursHelp}>
         <WeeklyHoursEditor value={d.hours} onChange={(hours) => set({ hours })} />
-        <h3 className="font-serif text-lg mt-8 mb-1">{b.special}</h3>
-        <p className="text-xs text-ink-soft mb-3">{b.specialHelp}</p>
-        <SpecialDaysEditor value={d.specialDays} onChange={(specialDays) => set({ specialDays })} />
-      </Card>
+        <div className="border-t border-ink/10 pt-5">
+          <h3 className="font-serif text-lg mb-1">{b.special}</h3>
+          <p className="text-xs text-ink-soft mb-3">{b.specialHelp}</p>
+          <SpecialDaysEditor value={d.specialDays} onChange={(specialDays) => set({ specialDays })} />
+        </div>
+      </Section>
 
-      {isEditor && id !== null && <Checkbox label={t.cms.publish} checked={d.isPublished} onChange={(e) => set({ isPublished: e.target.checked })} />}
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
-      {save.isSuccess && !save.isPending && <Alert tone="success">{t.cms.savedSite}</Alert>}
 
-      <div className="sticky bottom-0 -mx-1 flex items-center justify-between gap-2 border-t border-ink/10 bg-paper/95 px-1 py-4 backdrop-blur">
-        {isEditor && id !== null ? (
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={remove.isPending}
-            onClick={() => window.confirm(fmt(t.cms.confirmDelete, { name: d.mall })) && remove.mutate()}
-          >
-            {t.cms.delete}
-          </Button>
-        ) : (
-          <span />
-        )}
-        <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? t.saving : id === null ? t.cms.create : t.save}
-        </Button>
-      </div>
+      <SaveBar
+        dirty={dirty}
+        saving={save.isPending}
+        saved={save.isSuccess}
+        onDiscard={id === null ? undefined : () => setD(base)}
+        submitLabel={id === null ? t.cms.create : undefined}
+        left={
+          <>
+            {isEditor && id !== null && (
+              <label className="flex cursor-pointer items-center gap-2 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-sm">
+                <input type="checkbox" className="h-4 w-4 accent-moss" checked={d.isPublished} onChange={(e) => set({ isPublished: e.target.checked })} />
+                {t.cms.publish}
+              </label>
+            )}
+            {isEditor && id !== null && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                disabled={remove.isPending}
+                onClick={() => window.confirm(fmt(t.cms.confirmDelete, { name: d.mall })) && remove.mutate()}
+              >
+                {t.cms.delete}
+              </Button>
+            )}
+          </>
+        }
+      />
     </form>
   );
 }

@@ -7,6 +7,7 @@ import { CATEGORIES, HAIR_LENGTHS, slugify, type Category, type ServiceAdmin } f
 import { fmt } from "@/admin/i18n";
 import { useAdminT, useMe } from "@/admin/Providers";
 import { Alert, Badge, Button, Checkbox, Dialog, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { DragIcon, EmptyList, FilterBar, HiddenBadge, ListHint, OrderControls, useDragOrder, useOrder } from "@/admin/collection";
 
 type Draft = Omit<ServiceAdmin, "id" | "image" | "sortOrder" | "looks">;
 
@@ -165,72 +166,126 @@ function ServiceDialog({ service, onClose }: { service: ServiceAdmin | "new"; on
 export default function ServicesPage() {
   const { t, lang } = useAdminT();
   const { data: me } = useMe();
-  const qc = useQueryClient();
   const [editing, setEditing] = useState<ServiceAdmin | "new" | null>(null);
+  const [cat, setCat] = useState<Category | "all">("all");
+  const [q, setQ] = useState("");
   const canEdit = me?.role === "admin" || me?.role === "editor";
   const { data: services = [], error } = useQuery({
     queryKey: ["services"],
     queryFn: () => api<ServiceAdmin[]>("/admin/services"),
     enabled: canEdit,
   });
-
-  const order = useMutation({
-    mutationFn: (ids: number[]) => api("/admin/services/order", { method: "PUT", body: { ids } }),
-    onSettled: () => qc.invalidateQueries({ queryKey: ["services"] }),
-  });
-  const move = (index: number, by: -1 | 1) => {
-    const ids = services.map((s) => s.id);
-    const to = index + by;
-    if (to < 0 || to >= ids.length) return;
-    [ids[index], ids[to]] = [ids[to], ids[index]];
-    order.mutate(ids);
-  };
+  const order = useOrder<ServiceAdmin>("services", "/admin/services");
+  const drag = useDragOrder((id, target) => order.moveTo(services, id, target));
 
   if (!me) return null;
   if (!canEdit) return <Alert>{t.notAllowed}</Alert>;
+
+  const name = (s: ServiceAdmin) => (lang === "cs" ? s.nameCs : s.nameEn);
+  const needle = q.trim().toLowerCase();
+  const matches = (s: ServiceAdmin) => !needle || `${s.nameCs} ${s.nameEn}`.toLowerCase().includes(needle);
+  const shown = CATEGORIES.filter((c) => cat === "all" || c === cat)
+    .map((c) => ({ c, rows: services.filter((s) => s.category === c && matches(s)) }))
+    .filter((g) => g.rows.length);
 
   return (
     <div className="space-y-6">
       <PageHeader title={t.cms.services.title} lead={t.cms.services.lead} actions={<Button onClick={() => setEditing("new")}>+ {t.cms.services.add}</Button>} />
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
 
-      {CATEGORIES.map((cat) => {
-        const rows = services.map((s, i) => ({ s, i })).filter(({ s }) => s.category === cat);
-        if (!rows.length) return null;
-        return (
-          <section key={cat} className="rounded-2xl border border-ink/10 bg-white/70">
-            <h2 className="px-4 pt-4 pb-2 font-serif text-xl">{t.cms.cats[cat]}</h2>
-            <ul className="divide-y divide-ink/5">
-              {rows.map(({ s, i }) => (
-                <li key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm">
-                  <div className="min-w-[12rem] flex-1">
-                    <p className="font-medium">{lang === "cs" ? s.nameCs : s.nameEn}</p>
-                    <p className="text-xs text-ink-soft truncate">{lang === "cs" ? s.noteCs : s.noteEn}</p>
-                  </div>
-                  <span className="tabular-nums text-ink-soft">{s.durationMin} min</span>
-                  <span className="tabular-nums font-medium text-right min-w-24">
-                    {s.priceFrom ? `${t.cms.services.from} ` : ""}
-                    {s.lengthPrices ? HAIR_LENGTHS.map((len) => czk(s.lengthPrices![len])).join(" / ") : czk(s.priceCzk)} Kč
+      <FilterBar<Category>
+        value={cat}
+        onChange={setCat}
+        options={[
+          { key: "all", label: t.cms.list.all, count: services.length },
+          ...CATEGORIES.map((c) => ({ key: c, label: t.cms.cats[c], count: services.filter((s) => s.category === c).length })),
+        ]}
+        search={q}
+        onSearch={setQ}
+      />
+      <ListHint saving={order.saving} />
+
+      {services.length > 0 && !shown.length && <EmptyList text={t.cms.list.noMatch} />}
+
+      {shown.map(({ c, rows }) => (
+        <section key={c} className="overflow-hidden rounded-2xl border border-ink/10 bg-white/70">
+          <header className="flex items-baseline justify-between gap-4 px-4 sm:px-5 pt-4 pb-3">
+            <h2 className="font-serif text-2xl">{t.cms.cats[c]}</h2>
+            <span className="text-xs tabular-nums text-ink-soft">{rows.length}</span>
+          </header>
+          {/* Column names, so three prices read as short / medium / long */}
+          <div className="hidden md:grid grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_repeat(3,6rem)_7.5rem] items-center gap-x-3 border-y border-ink/10 bg-bone/40 px-5 py-2 text-[11px] uppercase tracking-wider text-ink-soft">
+            <span />
+            <span>{t.cms.list.service}</span>
+            <span className="text-right">{t.cms.list.time}</span>
+            {HAIR_LENGTHS.map((len) => (
+              <span key={len} className="text-right">
+                {t.cms.services.lengths[len]}
+              </span>
+            ))}
+            <span />
+          </div>
+          <ul className="divide-y divide-ink/5">
+            {rows.map((s, i) => (
+              <li
+                key={s.id}
+                {...drag.itemProps(s.id)}
+                className={`group grid grid-cols-[1.25rem_minmax(0,1fr)_auto] md:grid-cols-[1.25rem_minmax(0,1fr)_4.5rem_repeat(3,6rem)_7.5rem] items-center gap-x-3 px-4 sm:px-5 py-3 transition-[background-color,opacity,transform] hover:bg-bone/40 ${drag.state(s.id)} ${s.isPublished ? "" : "bg-bone/30"}`}
+              >
+                <DragIcon className="hidden md:block w-3 h-4 text-ink/25 cursor-grab group-hover:text-ink-soft" />
+                <button type="button" onClick={() => setEditing(s)} className="min-w-0 cursor-pointer text-left md:col-start-2 col-start-1 col-span-2 md:col-span-1">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className={`font-medium group-hover:underline underline-offset-4 decoration-ink/30 ${s.isPublished ? "" : "text-ink-soft"}`}>{name(s)}</span>
+                    {!s.isPublished && <HiddenBadge />}
+                    {s.looks > 0 && <Badge tone="muted">{fmt(t.cms.services.usedBy, { n: String(s.looks) })}</Badge>}
                   </span>
-                  <Badge tone={s.isPublished ? "green" : "muted"}>{s.isPublished ? t.cms.published : t.cms.hidden}</Badge>
-                  {s.looks > 0 && <span className="text-xs text-ink-soft">{fmt(t.cms.services.usedBy, { n: String(s.looks) })}</span>}
-                  <span className="flex gap-1">
-                    <Button variant="ghost" aria-label={t.cms.moveUp} disabled={i === 0 || order.isPending} onClick={() => move(i, -1)}>
-                      ↑
-                    </Button>
-                    <Button variant="ghost" aria-label={t.cms.moveDown} disabled={i === services.length - 1 || order.isPending} onClick={() => move(i, 1)}>
-                      ↓
-                    </Button>
-                    <Button variant="secondary" onClick={() => setEditing(s)}>
-                      {t.cms.edit}
-                    </Button>
+                  {(lang === "cs" ? s.noteCs : s.noteEn) && <span className="mt-0.5 block text-xs text-ink-soft truncate">{lang === "cs" ? s.noteCs : s.noteEn}</span>}
+                  {/* Phones: time and prices under the name */}
+                  <span className="md:hidden mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-soft tabular-nums">
+                    <span>{s.durationMin} min</span>
+                    {s.lengthPrices ? (
+                      HAIR_LENGTHS.map((len) => (
+                        <span key={len}>
+                          {t.cms.services.lengths[len]} <b className="font-medium text-ink">{czk(s.lengthPrices![len])} Kč</b>
+                        </span>
+                      ))
+                    ) : (
+                      <b className="font-medium text-ink">
+                        {s.priceFrom ? `${t.cms.services.from} ` : ""}
+                        {czk(s.priceCzk)} Kč
+                      </b>
+                    )}
                   </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+                </button>
+                <span className="hidden md:block text-right text-sm tabular-nums text-ink-soft">{s.durationMin} min</span>
+                {s.lengthPrices ? (
+                  HAIR_LENGTHS.map((len) => (
+                    <span key={len} className="hidden md:block text-right text-sm font-medium tabular-nums">
+                      {s.priceFrom && len === "short" ? <span className="mr-1 text-xs font-normal text-ink-soft">{t.cms.services.from}</span> : null}
+                      {czk(s.lengthPrices![len])} Kč
+                    </span>
+                  ))
+                ) : (
+                  <span className="hidden md:flex col-span-3 items-baseline justify-end gap-2 text-sm font-medium tabular-nums">
+                    <span className="text-[11px] font-normal text-ink-soft/70">{t.cms.list.onePrice}</span>
+                    {s.priceFrom && <span className="text-xs font-normal text-ink-soft">{t.cms.services.from}</span>}
+                    {czk(s.priceCzk)} Kč
+                  </span>
+                )}
+                <OrderControls
+                  className="justify-self-end row-start-1 col-start-3 md:col-start-auto md:row-start-auto"
+                  index={i}
+                  first={i === 0}
+                  last={i === rows.length - 1}
+                  disabled={order.saving}
+                  onUp={() => order.moveTo(services, s.id, rows[i - 1].id)}
+                  onDown={() => order.moveTo(services, s.id, rows[i + 1].id)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
 
       {editing && <ServiceDialog service={editing} onClose={() => setEditing(null)} />}
     </div>

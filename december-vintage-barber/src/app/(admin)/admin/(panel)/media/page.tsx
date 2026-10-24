@@ -7,7 +7,8 @@ import type { MediaItem, MediaKind, MediaUsage } from "@/admin/cms";
 import { fmt } from "@/admin/i18n";
 import { MediaThumb } from "@/admin/MediaPicker";
 import { useAdminT, useMe } from "@/admin/Providers";
-import { Alert, Badge, Button, Dialog, Field, Input, PageHeader } from "@/admin/ui";
+import { Alert, Button, Dialog, Field, Input, PageHeader } from "@/admin/ui";
+import { EmptyList, FilterBar } from "@/admin/collection";
 
 const size = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.round(b / 1024)} kB`);
 
@@ -108,9 +109,10 @@ function MediaDialog({ item, canDelete, onClose }: { item: MediaItem; canDelete:
 }
 
 export default function MediaPage() {
-  const { t } = useAdminT();
+  const { t, lang } = useAdminT();
   const { data: me } = useMe();
   const qc = useQueryClient();
+  const [dragging, setDragging] = useState(false);
   const [kind, setKind] = useState<MediaKind | "">("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<MediaItem | null>(null);
@@ -143,57 +145,110 @@ export default function MediaPage() {
 
   if (!me) return null;
   const canDelete = me.role === "admin" || me.role === "editor";
-  const tabs: [MediaKind | "", string][] = [
-    ["", t.cms.media.all],
-    ["image", t.cms.media.images],
-    ["video", t.cms.media.videos],
-  ];
+  const m = t.cms.ui.media;
 
   return (
-    <div className="space-y-6">
+    <div
+      className="relative space-y-6"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
+      onDrop={(e) => {
+        if (!e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDragging(false);
+        onFiles(e.dataTransfer.files);
+      }}
+    >
       <PageHeader
         title={t.cms.media.title}
         lead={t.cms.media.lead}
         actions={
           <Button onClick={() => input.current?.click()} disabled={uploading > 0}>
-            {uploading ? t.cms.uploading : `+ ${t.cms.upload}`}
+            {uploading ? `${t.cms.uploading} (${uploading})` : `+ ${t.cms.upload}`}
           </Button>
         }
       />
       <input ref={input} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={(e) => onFiles(e.target.files)} />
-      <p className="text-xs text-ink-soft">{t.cms.media.drop}</p>
+
+      {/* Drop zone: drag files from the computer anywhere on the page, or click */}
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        disabled={uploading > 0}
+        className={`flex w-full cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed px-5 py-5 text-left transition-colors ${
+          dragging ? "border-moss bg-celadon/60" : "border-ink/15 bg-white/50 hover:border-moss/60 hover:bg-white/80"
+        }`}
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-forest text-paper">
+          {uploading ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-paper/30 border-t-paper" />
+          ) : (
+            <svg aria-hidden viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M10 13V3.5M6 7.5l4-4 4 4M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </span>
+        <span className="min-w-0">
+          <span className="block font-medium">{uploading ? `${t.cms.uploading} (${uploading})` : m.dropHere}</span>
+          <span className="block text-xs text-ink-soft">
+            {m.orClick} · {t.cms.media.drop}
+          </span>
+        </span>
+      </button>
       {uploadError && <Alert>{uploadError}</Alert>}
       {error && <Alert>{error instanceof ApiError ? error.message : t.somethingWrong}</Alert>}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {tabs.map(([k, label]) => (
-          <button
-            key={k || "all"}
-            type="button"
-            onClick={() => setKind(k)}
-            aria-pressed={kind === k}
-            className={`cursor-pointer rounded-full px-3.5 py-1.5 text-sm ${kind === k ? "bg-forest text-paper" : "bg-bone text-ink-soft hover:text-ink"}`}
-          >
-            {label}
-          </button>
-        ))}
-        <Input type="search" placeholder={t.cms.media.search} aria-label={t.cms.media.search} value={q} onChange={(e) => setQ(e.target.value)} className="ml-auto max-w-xs" />
-      </div>
+      <FilterBar<MediaKind>
+        value={kind || "all"}
+        onChange={(k) => setKind(k === "all" ? "" : k)}
+        options={[
+          { key: "all", label: t.cms.media.all },
+          { key: "image", label: t.cms.media.images },
+          { key: "video", label: t.cms.media.videos },
+        ]}
+        search={q}
+        onSearch={setQ}
+      />
 
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {items.map((m) => (
-          <li key={m.id}>
-            <button type="button" onClick={() => setOpen(m)} className="block w-full cursor-pointer text-left">
-              <MediaThumb media={m} className="aspect-square w-full" />
-              <span className="mt-1.5 flex items-center justify-between gap-2">
-                <span className="truncate text-xs text-ink-soft">{m.altCs || "—"}</span>
-                <Badge tone={m.used ? "green" : "muted"}>{m.used ? fmt(t.cms.media.used, { n: String(m.used) }) : t.cms.media.unused}</Badge>
+      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+        {items.map((it) => (
+          <li key={it.id}>
+            <button
+              type="button"
+              onClick={() => setOpen(it)}
+              className="group block w-full cursor-pointer rounded-2xl border border-ink/10 bg-white/70 p-2 text-left transition-shadow hover:shadow-[0_12px_30px_-18px_rgba(17,38,26,0.5)]"
+            >
+              <span className="relative block overflow-hidden rounded-xl">
+                <MediaThumb media={it} className="aspect-square w-full transition-transform duration-500 group-hover:scale-[1.04]" />
+                {it.kind === "video" && (
+                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-paper backdrop-blur">
+                    <svg aria-hidden viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="currentColor">
+                      <path d="M3 2v8l7-4z" />
+                    </svg>
+                    {m.video}
+                  </span>
+                )}
+                {!it.used && (
+                  <span className="absolute right-2 top-2 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] font-medium text-ink-soft">{t.cms.media.unused}</span>
+                )}
+              </span>
+              <span className="mt-2 flex items-center justify-between gap-2 px-1 pb-0.5">
+                {it.altCs ? (
+                  <span className="truncate text-xs">{lang === "cs" ? it.altCs : it.altEn || it.altCs}</span>
+                ) : (
+                  <span className="truncate text-xs italic text-amber-700">{m.noAlt}</span>
+                )}
+                {it.used > 0 && <span className="shrink-0 text-[11px] tabular-nums text-ink-soft">{fmt(t.cms.media.used, { n: String(it.used) })}</span>}
               </span>
             </button>
           </li>
         ))}
       </ul>
-      {!items.length && !error && <p className="text-sm text-ink-soft">{t.cms.empty}</p>}
+      {!items.length && !error && <EmptyList text={q ? t.cms.list.noMatch : t.cms.empty} />}
       {open && <MediaDialog key={open.id} item={open} canDelete={canDelete} onClose={() => setOpen(null)} />}
     </div>
   );

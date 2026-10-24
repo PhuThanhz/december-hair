@@ -6,7 +6,8 @@ import { api, ApiError } from "@/admin/api";
 import type { SettingsAdmin } from "@/admin/cms";
 import { useAdminT, useMe } from "@/admin/Providers";
 import type { BranchOption } from "@/admin/types";
-import { Alert, Button, Card, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { Alert, Button, Field, Input, PageHeader, Select } from "@/admin/ui";
+import { SaveBar, Section } from "@/admin/form-kit";
 
 type Draft = Omit<SettingsAdmin, "notifyEmails"> & { notifyEmails: string };
 
@@ -15,6 +16,9 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
   const qc = useQueryClient();
   const s = t.cms.settings;
   const [d, setD] = useState<Draft>({ ...initial, notifyEmails: initial.notifyEmails.join(", ") });
+  // What is saved on the server, to tell whether there is anything to save
+  const [base, setBase] = useState<Draft>(d);
+  const dirty = JSON.stringify(d) !== JSON.stringify(base);
   const set = (patch: Partial<Draft>) => setD((prev) => ({ ...prev, ...patch }));
   const amounts = d.voucherOptions.map((o) => o.amountCzk);
 
@@ -33,7 +37,9 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
       }),
     onSuccess: (saved) => {
       qc.setQueryData(["settings"], saved);
-      setD({ ...saved, notifyEmails: saved.notifyEmails.join(", ") });
+      const next = { ...saved, notifyEmails: saved.notifyEmails.join(", ") };
+      setD(next);
+      setBase(next);
     },
   });
 
@@ -47,19 +53,17 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
 
   return (
     <form
-      className="space-y-6 max-w-3xl"
       onSubmit={(e) => {
         e.preventDefault();
         save.mutate();
       }}
     >
-      <Card className="space-y-4">
-        <h2 className="font-serif text-xl">{s.social}</h2>
+      <Section title={s.social} help={t.cms.ui.sections.social}>
         {text(s.instagram, "instagramUrl", { type: "url" })}
         {text(s.facebook, "facebookUrl", { type: "url" })}
-      </Card>
+      </Section>
 
-      <Card className="space-y-4">
+      <Section title={t.cms.ui.sections.bookings} help={t.cms.ui.sections.bookingsHelp}>
         <Field label={s.defaultBranch} help={s.defaultBranchHelp}>
           {(id) => (
             <Select id={id} value={d.defaultBranchId ?? ""} onChange={(e) => set({ defaultBranchId: Number(e.target.value) || null })}>
@@ -73,38 +77,45 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
           )}
         </Field>
         {text(s.notify, "notifyEmails", { help: s.notifyHelp })}
-      </Card>
+      </Section>
 
-      <Card className="space-y-4">
-        <h2 className="font-serif text-xl">{s.legal}</h2>
-        <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+      <Section title={s.legal} help={t.cms.ui.sections.legal}>
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]">
           {text(s.company, "legalCompanyName")}
           {text(s.ico, "legalIco")}
         </div>
         {text(s.address, "legalAddress")}
-      </Card>
+      </Section>
 
-      <Card className="space-y-4">
-        <h2 className="font-serif text-xl">{s.vouchers}</h2>
-        <ul className="space-y-2">
+      <Section title={s.vouchers} help={t.cms.ui.sections.vouchers}>
+        <ul className="grid gap-2 sm:grid-cols-2">
           {d.voucherOptions.map((o, i) => (
-            <li key={i} className="flex flex-wrap items-center gap-3">
+            <li
+              key={i}
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${o.active ? "border-moss/30 bg-celadon/30" : "border-ink/10 bg-paper/60"}`}
+            >
               <Input
                 type="number"
                 min={1}
                 aria-label={s.amount}
-                className="w-36"
+                className="w-28 !py-1.5"
                 value={o.amountCzk}
                 onChange={(e) => setOption(i, { amountCzk: Number(e.target.value) })}
               />
               <span className="text-sm text-ink-soft">Kč</span>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs">
                 <input type="checkbox" className="h-4 w-4 accent-moss" checked={o.active} onChange={(e) => setOption(i, { active: e.target.checked })} />
                 {s.active}
               </label>
-              <Button type="button" variant="ghost" onClick={() => set({ voucherOptions: d.voucherOptions.filter((_, j) => j !== i) })}>
-                {t.cms.remove}
-              </Button>
+              <button
+                type="button"
+                aria-label={t.cms.remove}
+                title={t.cms.remove}
+                onClick={() => set({ voucherOptions: d.voucherOptions.filter((_, j) => j !== i) })}
+                className="grid h-7 w-7 cursor-pointer place-items-center rounded-full text-ink-soft hover:bg-red-50 hover:text-red-700"
+              >
+                ✕
+              </button>
             </li>
           ))}
         </ul>
@@ -116,7 +127,7 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
         >
           + {s.addAmount}
         </Button>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 border-t border-ink/10 pt-4 sm:grid-cols-2">
           <Field label={s.defaultAmount}>
             {(id) => (
               <Select id={id} value={d.voucherDefaultAmount ?? ""} onChange={(e) => set({ voucherDefaultAmount: Number(e.target.value) || null })}>
@@ -135,19 +146,16 @@ function SettingsForm({ initial, branches }: { initial: SettingsAdmin; branches:
             )}
           </Field>
         </div>
-      </Card>
+      </Section>
 
-      <Card>
+      <Section title={t.cms.ui.sections.retention} help={t.cms.ui.sections.retentionHelp}>
         <Field label={s.retention} help={s.retentionHelp}>
           {(id) => <Input id={id} type="number" min={1} max={120} value={d.retentionMonths} onChange={(e) => set({ retentionMonths: Number(e.target.value) })} />}
         </Field>
-      </Card>
+      </Section>
 
       {save.isError && <Alert>{save.error instanceof ApiError ? save.error.message : t.somethingWrong}</Alert>}
-      {save.isSuccess && <Alert tone="success">{t.cms.savedSite}</Alert>}
-      <Button type="submit" disabled={save.isPending}>
-        {save.isPending ? t.saving : t.save}
-      </Button>
+      <SaveBar dirty={dirty} saving={save.isPending} saved={save.isSuccess} onDiscard={() => setD(base)} />
     </form>
   );
 }
