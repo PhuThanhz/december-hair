@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -106,21 +106,34 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   // Load saved sidebar width & state from localStorage
   useEffect(() => {
-    try {
-      const savedWidth = localStorage.getItem("admin_sidebar_width");
-      if (savedWidth) {
-        const parsed = parseInt(savedWidth, 10);
-        if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-          setSidebarWidth(parsed);
+    const timer = setTimeout(() => {
+      try {
+        const savedWidth = localStorage.getItem("admin_sidebar_width");
+        if (savedWidth) {
+          const parsed = parseInt(savedWidth, 10);
+          if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+            setSidebarWidth(parsed);
+          }
         }
+        const savedCollapsed = localStorage.getItem("admin_sidebar_collapsed");
+        if (savedCollapsed === "true") {
+          setIsCollapsed(true);
+        }
+      } catch {
+        // Ignore storage errors
       }
-      const savedCollapsed = localStorage.getItem("admin_sidebar_collapsed");
-      if (savedCollapsed === "true") {
-        setIsCollapsed(true);
-      }
-    } catch {
-      // Ignore storage errors
-    }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("admin_sidebar_collapsed", String(next));
+      } catch {}
+      return next;
+    });
   }, []);
 
   // Keyboard shortcut: Cmd+B or Ctrl+B to toggle sidebar
@@ -133,7 +146,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [toggleCollapse]);
 
   // Drag to resize handler
   useEffect(() => {
@@ -179,16 +192,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     setIsDragging(true);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-  };
-
-  const toggleCollapse = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("admin_sidebar_collapsed", String(next));
-      } catch {}
-      return next;
-    });
   };
 
   const resetWidth = () => {
