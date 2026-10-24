@@ -1,85 +1,149 @@
-# DECEMBER HAIR — WEBSITE SALON
+<div align="center">
 
-Website cho salon December Hair (Praha · Kladno · Mladá Boleslav), viết bằng Next.js 16 (App Router + TypeScript + Tailwind CSS), song ngữ CZ / EN.
+  <img src="december_hair_fe/public/images/logo-transparent.png" alt="December Hair Logo" width="100" />
 
----
+  # DECEMBER HAIR
+  ### 🌿 Modern Premium Hair Salon & Barber Web Platform
+  **Praha · Kladno · Mladá Boleslav (Czech Republic)**
 
-## 💈 december_hair_fe
-- **Phong cách:** editorial xanh rêu – trắng, lấy tông từ tường salon thật.
-- **Tính năng chính:** cảnh mở đầu 3 video, "Pro celou rodinu" (5 tấm gương theo từng nhóm khách), bảng giá tự tính tổng tiền & thời gian rồi đặt lịch, lookbook, reels, bản đồ 3 chi nhánh (Mapa / ảnh Letecká ČÚZK, nút Google Maps), poukaz.
-- **Khởi chạy:**
-  ```bash
-  cd december_hair_fe
-  npm install
-  npm run dev
-  # Mở tại: http://localhost:3004
-  ```
+  <p align="center">
+    <a href="https://december-hair.vercel.app">
+      <img src="https://img.shields.io/badge/Live_Demo-december--hair.vercel.app-2e5b44?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" />
+    </a>
+  </p>
 
----
+  <p align="center">
+    <img src="https://img.shields.io/badge/Next.js_16-Turbopack-black?style=flat-square&logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript" alt="TypeScript" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS-Modern_UI-38bdf8?style=flat-square&logo=tailwindcss" alt="Tailwind CSS" />
+    <img src="https://img.shields.io/badge/GSAP-Motion_%26_Scroll-88ce02?style=flat-square&logo=greensock" alt="GSAP" />
+    <img src="https://img.shields.io/badge/FastAPI-Backend_API-009688?style=flat-square&logo=fastapi" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/PostgreSQL-Database-336791?style=flat-square&logo=postgresql" alt="PostgreSQL" />
+    <img src="https://img.shields.io/badge/Bilingual-CZ_%2F_EN-darkgreen?style=flat-square" alt="Bilingual" />
+  </p>
 
-## ⚙️ Backend + admin (`/admin`)
-Nội dung của site (chi nhánh, dịch vụ, giá, lookbook, reels, text CZ/EN, ảnh/video) nằm trong database của backend, repo riêng: **https://github.com/tiendung4411/december_hair_be** (FastAPI + PostgreSQL, hướng dẫn EN/CZ trong README của repo đó). Site đọc `GET /api/v1/public/content`; backend gọi `POST /api/revalidate` của site sau mỗi lần lưu trong admin. **Nếu backend không chạy, site vẫn chạy** bằng nội dung có sẵn trong `src/app/data.ts` (chỉ `/admin` là không dùng được).
-
-- **Chạy cùng backend (dev):** clone backend cạnh repo này, hoặc ngay bên trong nó (`december_hair_be/` đã có trong `.gitignore`):
-  ```
-  december-hair/       ← repo này (site + /admin)
-  december_hair_be/    ← backend (hoặc december-hair/december_hair_be/)
-  ```
-  1. Trong `december_hair_be`: `cp .env.example .env`, đặt `JWT_SECRET`, một `REVALIDATE_SECRET` và `NEXT_INTERNAL_URL=http://host.docker.internal:3004`, rồi:
-     ```bash
-     docker compose up -d --build
-     docker compose exec api python -m app.cli create-admin --email you@example.com --name "Your Name"
-     docker compose exec api python -m app.cli seed seed/content.json --public seed/media
-     ```
-  2. Trong `december_hair_fe`: `cp .env.example .env.local`, đặt `API_URL=http://localhost:8000/api/v1` và **cùng** `REVALIDATE_SECRET`, rồi `npm run dev`.
-  3. Site: http://localhost:3004 · Admin: http://localhost:3004/admin (luôn đăng nhập qua cổng 3004, không qua 8000).
-- **URL:** `/` tiếng Séc, `/en` tiếng Anh, `/cs…` chuyển về `/…`. Ảnh/video CMS nằm ở `/media/…` (dev: Next chuyển tiếp sang backend).
-
-### Quy ước khi làm việc
-- **Text, giá, ảnh, chi nhánh: sửa trong `/admin`**, không sửa trong `data.ts`. `data.ts` giờ chỉ là nội dung dự phòng khi backend tắt và nguồn để tạo dữ liệu mẫu (seed).
-- Trong component, lấy dữ liệu bằng `useContent()` (chi nhánh, dịch vụ, reels…) và `t` (text) thay vì import `BRANCHES`, `SERVICES`, `REELS`… từ `data.ts`. Kiểu dữ liệu: `src/content/types.ts`.
-- **Thêm text mới:** thêm key vào cả `cs` và `en` trong `T` (`data.ts`). Site hiện ngay giá trị trong `data.ts` (log server báo key nào CMS chưa có). Để sửa được trong admin, đưa key vào database:
-  ```bash
-  cd december_hair_fe && npm run export:content          # ghi seed/content.json của december_hair_be (tự tìm cả hai chỗ)
-  cd <thư mục december_hair_be> && docker compose exec -T api python -m app.cli sync-texts - < seed/content.json
-  ```
-  Xoá key khỏi code thì thêm `--prune`. Giá trị đã sửa trong admin được giữ nguyên.
-- Thêm **trường dữ liệu mới** (vd. một thuộc tính của chi nhánh) là thay đổi ở cả hai repo: báo người làm backend.
-- Mỗi người làm trên nhánh riêng, mở PR vào `main`, pull `main` thường xuyên.
+</div>
 
 ---
 
-## 🎨 Tài Nguyên Hình Ảnh & Logo Dùng Chung (`shared-assets/`)
-Toàn bộ hình ảnh thực tế từ tiệm đã được xử lý và đồng bộ vào thư mục `public/images/` của project để dùng trực tiếp qua đường dẫn `/images/<tên-file>`:
+## 📖 Giới thiệu Dự án
 
-### 🏷️ Bộ Logo Brand:
-- `/images/logo.png`: Logo chữ "D" nguyên bản.
-- `/images/logo-transparent.png`: Logo chữ "D" tách nền trong suốt (PNG), dùng đặt lên mọi loại background.
-- `/images/logo-white.png`: Logo chữ "D" màu trắng tinh tế (dành cho nền tối/tường xanh rêu).
-- `/images/logo-gold.png`: Logo chữ "D" ánh kim vàng đồng (dành cho bản Vintage Barber).
+**December Hair** là nền tảng web hiện đại phục vụ chuỗi salon tóc cao cấp tại Cộng hòa Séc (*Praha · Kladno · Mladá Boleslav*). Dự án được xây dựng với triết lý thiết kế **Editorial sang trọng, tone màu xanh rêu – trắng kem tự nhiên**, tối ưu trải nghiệm tương tác mượt mà và tích hợp hệ thống quản trị nội dung (Headless CMS) mạnh mẽ.
 
-### 🏢 Không Gian & Nội Thất Tiệm (Interior & Decor):
-- `/images/salon-interior-main.png`: Không gian tiệm góc rộng (tường vòm xanh rêu, bảng hiệu December sáng đèn, gương LED halo).
-- `/images/salon-reception.png`: Quầy lễ tân với chữ kim loại nổi "D December" cao cấp.
-- `/images/barber-chair-vintage-chrome.png` *(Mới)*: Chiếc ghế cắt tóc Barber cổ điển kim loại mạ chrome sáng bóng, đệm da đen cao cấp trước gương vòm LED.
-- `/images/salon-wash-stations.png`: Khu vực giường gội đầu bồn sứ đen cao cấp, vách gạch thông gió xanh rêu.
-- `/images/decor-chrome-bear-card.png` *(Mới)*: Tượng gấu Bearbrick tráng gương mạ chrome tinh tế cầm danh thiếp xanh olive của tiệm.
-- `/images/decor-lucky-cat.png`: Mèo thần tài may mắn trang trí trên quầy của tiệm.
+---
 
+## ✨ Điểm nhấn & Tính năng nổi bật
 
-### ✂️ Dịch Vụ & Tay Nghề Thợ (Services & Stylists):
-- `/images/stylist-haircut-action.png`: Thợ cắt tóc chính đang chăm chút kiểu tóc cho khách nam.
-- `/images/service-hair-wash-massage.png`: Cận cảnh dịch vụ gội đầu dưỡng sinh & massage thư giãn.
-- `/images/treatment-steaming-rinse.png` *(Mới)*: Cận cảnh xả dưỡng, phủ dưỡng & hấp hơi nước phục hồi tóc.
-- `/images/service-hair-styling-iron.png`: Cận cảnh kỹ thuật là ép tóc/tạo kiểu bóng mượt chuyên nghiệp.
-- `/images/showcase-balayage-curls.png` *(Mới)*: Tác phẩm tóc uốn sóng lơi nhuộm Balayage Blonde cực kỳ sang chảnh.
-- `/images/haircut-kid-fade.png`: Ảnh mẫu tóc fade / side-part nam tính cho trẻ em/nam giới.
-- `/images/haircut-fade-tattoo-pattern.png` *(Mới)*: Mẫu tóc Taper Fade cạo hoa văn kẻ vạch (Hair Tattoo) phá cách sau gáy.
+### 🖥️ Website Khách hàng (Frontend)
+- 🎨 **Visual & Motion cao cấp**: Tích hợp Lenis Smooth Scroll kết hợp GSAP ScrollTrigger mang lại hiệu ứng cuộn trang mượt mà chuẩn studio.
+- 🌍 **Đa ngôn ngữ bản địa**: Hỗ trợ song ngữ **Tiếng Séc (CZ)** và **Tiếng Anh (EN)**, chuyển đổi ngôn ngữ liền mạch không tải lại trang.
+- 💈 **Bảng giá thông minh & Đặt lịch**: Tự động tính toán tổng chi phí và thời lượng dự kiến theo từng dịch vụ được chọn, hỗ trợ chuyển đổi danh mục nhanh chóng.
+- 👨‍👩‍👧‍👦 **"Pro celou rodinu"**: Trải nghiệm tương tác 5 tấm gương chuyên biệt cho từng nhóm đối tượng khách hàng (Nam, Nữ, Trẻ em, Gia đình).
+- 📍 **Bản đồ tương tác 3 Chi nhánh**: Định vị trực quan các cơ sở tại Praha, Kladno và Mladá Boleslav, tích hợp ảnh hàng không ČÚZK và chỉ đường Google Maps.
+- 🎞️ **Reels & Lookbook Showcase**: Trình diễn các mẫu tóc, video ngắn thực tế từ salon.
 
-### 🎟️ Quà Tặng & Dụng Cụ Nghề (Vouchers & Flatlay Tools):
-- `/images/voucher-card-1000kc.png` *(Mới)*: Thẻ Voucher / Gift Card sang trọng màu xanh olive dập chìm ánh bạc trị giá 1000 Kč.
-- `/images/promo-voucher-3000kc.png`: Banner khuyến mãi / voucher 3000 Kč của tiệm.
-- `/images/tools-flatlay-gold-shears.png` *(Mới)*: Ảnh Flatlay nghệ thuật kéo cắt tóc màu vàng đồng, lược carbon chuyên dụng và danh thiếp December.
+### ⚙️ Hệ thống Quản trị (Admin Back-Office)
+- 🔐 **Xác thực & Phân quyền**: Quản lý truy cập an toàn theo vai trò (`admin`, `editor`, `branch_manager`).
+- 📝 **Live Content Management**: Cập nhật giá dịch vụ, thông tin chi nhánh, banner, hình ảnh lookbook và nội dung văn bản trực tiếp từ giao diện admin.
+- ⚡ **Instant On-Demand Revalidation**: Hệ thống tự động kích hoạt Next.js ISR để cập nhật dữ liệu mới lên website khách hàng ngay tức thì.
 
+---
 
+## 🛠️ Công nghệ sử dụng
 
+| Tầng | Công nghệ | Chi tiết |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js 16 (App Router), React 19, TypeScript | Turbopack, Server & Client Components, Partial Prerendering |
+| **Styling** | Tailwind CSS, Lucide Icons, Custom Fonts | Noto Serif Display, Inter, Bảng màu chuẩn Brandkit |
+| **Hiệu ứng** | GSAP 3, ScrollTrigger, Lenis | Motion fluid, Cinematic reveal, Magnetic button |
+| **Bản đồ** | MapLibre GL, Leaflet | Bản đồ định vị chi nhánh, hỗ trợ ảnh vệ tinh ČÚZK |
+| **Backend** | FastAPI (Python 3.11+), SQLAlchemy, Pydantic | Kiến trúc RESTful microservice, JWT Authentication |
+| **Database** | PostgreSQL | Lưu trữ dữ liệu cấu trúc, logs hoạt động |
+| **Deploy** | Vercel (FE) + Docker / VPS (BE) | CI/CD tự động khi push nhánh `main` |
+
+---
+
+## 📂 Cấu trúc Thư mục
+
+```text
+december-hair/
+├── december_hair_fe/           # Ứng dụng Next.js Frontend & Admin
+│   ├── src/
+│   │   ├── app/                # Next.js App Router (/(site), /(admin), api)
+│   │   ├── admin/              # Components & logic cho hệ thống quản trị (/admin)
+│   │   ├── components/         # UI Components (Hero, Services, PriceList, Branches...)
+│   │   ├── content/            # Data provider & Fallback local content
+│   │   └── lib/                # Utility functions, GSAP animations, formatters
+│   ├── public/                 # Static assets (images, videos, logo)
+│   └── package.json
+│
+├── shared-assets/              # Kho tài nguyên gốc (Ảnh nội thất, logo, voucher)
+└── README.md                   # Tài liệu dự án
+```
+
+---
+
+## 🚀 Hướng dẫn Cài đặt & Khởi chạy (Local Development)
+
+### 1. Yêu cầu hệ thống
+- **Node.js**: phiên bản `>= 20.x`
+- **npm**: phiên bản `>= 10.x`
+- **Docker & Docker Compose** (nếu chạy kèm Backend)
+
+### 2. Chạy Frontend độc lập (Mock mode)
+*Website có sẵn hệ thống fallback dữ liệu `data.ts`, có thể chạy hoàn chỉnh mà không bắt buộc khởi động Backend.*
+
+```bash
+# Di chuyển vào thư mục frontend
+cd december_hair_fe
+
+# Cài đặt thư viện
+npm install
+
+# Khởi chạy server phát triển
+npm run dev
+```
+🌐 Mở trình duyệt tại: **http://localhost:3004**
+
+### 3. Chạy toàn bộ hệ thống cùng Backend
+Repo Backend: [tiendung4411/december_hair_be](https://github.com/tiendung4411/december_hair_be)
+
+```bash
+# 1. Khởi động Backend qua Docker
+cd december_hair_be
+cp .env.example .env
+docker compose up -d --build
+
+# Khởi tạo tài khoản quản trị & dữ liệu mẫu
+docker compose exec api python -m app.cli create-admin --email admin@decemberhair.cz --name "Admin"
+docker compose exec api python -m app.cli seed seed/content.json --public seed/media
+
+# 2. Khởi động Frontend kết nối API
+cd ../december_hair_fe
+cp .env.example .env.local
+# Đặt API_URL=http://localhost:8000/api/v1 trong .env.local
+npm run dev
+```
+
+---
+
+## 🌿 Quy trình Làm việc & Đóng góp (Git Workflow)
+
+1. **Nhánh `main`**: Nhánh chính thức, tự động build và triển khai trực tiếp lên môi trường Production (Vercel). Vui lòng **không push trực tiếp** vào `main`.
+2. **Nhánh tính năng**: Mỗi thành viên tạo nhánh riêng từ `main` (ví dụ: `feature/ten-tinh-nang` hoặc nhánh cá nhân `tiendung`).
+3. **Pull Request**: Khi hoàn thành tính năng, tạo Pull Request vào `main` để kiểm tra chất lượng code và review trước khi gộp.
+4. **Kiểm tra trước khi commit**:
+   ```bash
+   cd december_hair_fe
+   npm run lint        # Đảm bảo 0 lỗi linting
+   npm run build       # Đảm bảo build thành công
+   ```
+
+---
+
+<div align="center">
+
+  **December Hair — Kadeřnictví pro ženy, muže i děti**  
+  *Crafted with precision & passion.*
+
+</div>
