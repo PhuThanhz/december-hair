@@ -5,16 +5,11 @@ import Image from "next/image";
 import type { Dict } from "@/content/types";
 import { useContent, useLang } from "@/content/ContentProvider";
 import { gsap, useGSAP, MQ_MOTION } from "@/lib/gsap";
+import { loaderFor } from "@/lib/media";
 import Magnetic from "./Magnetic";
 
-const FEED_ITEMS = [
-  { src: "/images/women-blonde-waves.webp", tag: "Balayage", likes: "894" },
-  { src: "/images/men-lilac-fade.webp", tag: "Taper Fade", likes: "612" },
-  { src: "/images/women-layered-copper.webp", tag: "Styling", likes: "743" },
-  { src: "/images/men-hair-tattoo.webp", tag: "Hair Tattoo", likes: "528" },
-  { src: "/images/care-olaplex-blonde.webp", tag: "Olaplex Péče", likes: "815" },
-  { src: "/images/color-copper-mullet.webp", tag: "Color Mullet", likes: "691" },
-];
+// The grid shows the first lookbook photos, so a photo changed in the CMS changes here too
+const FEED_SIZE = 6;
 
 function InstagramIcon({ className = "" }: { className?: string }) {
   return (
@@ -38,7 +33,8 @@ function FacebookIcon({ className = "" }: { className?: string }) {
 const handle = (url: string) => url.replace(/\/+$/, "").split("/").pop() ?? "";
 
 export default function Footer({ t }: { t: Dict }) {
-  const { social, branches } = useContent();
+  const { social, branches, looks } = useContent();
+  const feed = looks.slice(0, FEED_SIZE);
   const lang = useLang();
   const ig = `@${handle(social.instagram)}`;
   const root = useRef<HTMLElement | null>(null);
@@ -159,40 +155,37 @@ export default function Footer({ t }: { t: Dict }) {
 
           {/* 6 High-End Visual Cards Grid */}
           <div data-feed-grid className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {FEED_ITEMS.map((item) => (
+            {feed.map((item) => (
               <a
-                key={item.src}
+                key={item.id}
                 href={social.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-feed
                 className="group relative aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-3xl bg-forest-2 border border-paper/10 shadow-lg select-none"
-                aria-label={`Instagram ${ig} - ${item.tag}`}
+                aria-label={`Instagram ${ig} - ${item.title[lang]}`}
               >
                 <Image
-                  src={item.src}
-                  alt={item.tag}
+                  src={item.image}
+                  loader={loaderFor(item.image)}
+                  alt={item.title[lang]}
                   fill
                   quality={90}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 />
 
-                {/* Subtle gradient overlay on hover with IG badge and stats */}
+                {/* Subtle gradient overlay on hover with the look and the IG handle */}
                 <div className="absolute inset-0 bg-gradient-to-t from-forest/90 via-forest/30 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3.5 sm:p-4 flex flex-col justify-between text-paper">
                   <div className="flex items-center justify-between">
                     <span className="px-2 py-0.5 rounded-full bg-forest/70 text-[10px] font-medium tracking-wide uppercase">
-                      {item.tag}
+                      {item.title[lang]}
                     </span>
                     <InstagramIcon className="w-3.5 h-3.5 text-paper/80" />
                   </div>
 
                   <div>
-                    <div className="flex items-center gap-1 text-xs text-rose-300 font-mono">
-                      <span>♥</span>
-                      <span>{item.likes}</span>
-                    </div>
-                    <p className="text-[11px] text-paper/80 mt-0.5 font-serif italic truncate">
+                    <p className="text-[11px] text-paper/80 font-serif italic truncate">
                       {ig}
                     </p>
                   </div>
